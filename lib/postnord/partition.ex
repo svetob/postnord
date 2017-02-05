@@ -10,7 +10,8 @@ defmodule Postnord.Partition do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(Postnord.MessageLog, [path, [name: Postnord.MessageLog]])
+      worker(Postnord.MessageLog, [path <> "/message.log", [name: Postnord.MessageLog]]),
+      worker(Postnord.IndexLog, [path <> "/index.log", [name: Postnord.IndexLog]])
     ]
 
     Supervisor.start_link(children, [strategy: :one_for_one])
@@ -26,18 +27,25 @@ defmodule Postnord.Partition do
     receive do
       {:write_ok} -> :ok
     after
-      5_000 -> {:error, :timeout}
+      timeout -> {:error, :timeout}
     end
   end
 
   def handle_cast({:write, caller, bytes}, nil) do
-    id = 0#Postnord.now(:nanosecond)
+    id = Postnord.now(:nanosecond) # TODO: ID Generator
     Postnord.MessageLog.write(Postnord.MessageLog, self(), bytes, {caller, id})
     {:noreply, nil}
   end
 
-  def handle_cast({:write_ok, offset, len, {caller, id}}, nil) do
+  def handle_cast({:write_messagelog_ok, offset, len, {caller, id}}, nil) do
+    entry = %Postnord.IndexLog.Entry{id: id, offset: offset, len: len}
+    Postnord.IndexLog.write(Postnord.IndexLog, self(), entry, {caller})
+    {:noreply, nil}
+  end
+
+  def handle_cast({:write_indexlog_ok, {caller}}, nil) do
     send caller, {:write_ok}
     {:noreply, nil}
   end
+
 end

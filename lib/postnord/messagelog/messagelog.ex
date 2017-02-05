@@ -17,7 +17,7 @@ defmodule Postnord.MessageLog do
   """
 
   @file_opts [:binary, :append]
-  @buffer_size 8192
+  @buffer_size 0 #8192
 
 
   def start_link(path, opts \\ []) do
@@ -27,23 +27,24 @@ defmodule Postnord.MessageLog do
   def init(path) do
     # Open output file
     path_abs = Path.absname(path)
-    Logger.info "Opening file for reading #{path_abs}"
     file = File.open!(path_abs, @file_opts)
+    Logger.info "Writing: #{path_abs}"
+
     {:ok, {file, 0, <<>>, []}}
   end
 
   @doc """
   Write a message to the log
   """
-  def write(pid, caller, bytes, metadata) do
-    GenServer.cast(pid, {:write, caller, bytes, metadata})
+  def write(pid, from, bytes, metadata) do
+    GenServer.cast(pid, {:write, from, bytes, metadata})
   end
 
-  def handle_cast({:write, caller, bytes, metadata},
+  def handle_cast({:write, from, bytes, metadata},
                   {file, offset, buffer, pending}) do
 
     len = byte_size(bytes)
-    pending = [{caller, offset, len, metadata} | pending]
+    pending = [{from, offset, len, metadata} | pending]
     offset = offset + len
     buffer = buffer <> bytes
 
@@ -60,8 +61,8 @@ defmodule Postnord.MessageLog do
   defp flush(file, buffer, pending) do
     spawn fn ->
       :ok = IO.binwrite(file, buffer)
-      pending |> Enum.each(fn {caller, offset, len, metadata} ->
-        GenServer.cast(caller, {:write_ok, offset, len, metadata})
+      pending |> Enum.each(fn {from, offset, len, metadata} ->
+        GenServer.cast(from, {:write_messagelog_ok, offset, len, metadata})
       end)
     end
   end

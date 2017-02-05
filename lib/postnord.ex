@@ -7,7 +7,7 @@ defmodule Postnord do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(Postnord.Partition, ["postnord.log", [name: Postnord.Partition]])
+      worker(Postnord.Partition, ["data/", [name: Postnord.Partition]])
     ]
 
     opts = [
@@ -21,6 +21,8 @@ defmodule Postnord do
   def now(unit \\ :millisecond) do
     :erlang.system_time(unit)
   end
+
+
 
   def index_test() do
     test_start = now()
