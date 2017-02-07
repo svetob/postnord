@@ -32,6 +32,7 @@ defmodule Postnord.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
+      {:random_bytes, "~> 1.0"},
       {:credo, "~> 0.5", only: :dev}
     ]
   end

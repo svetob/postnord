@@ -1,6 +1,8 @@
 defmodule Postnord.Partition do
   require Logger
   use GenServer
+  alias Postnord.MessageLog, as: MessageLog
+  alias Postnord.IndexLog, as: IndexLog
 
   def start_link(path, opts \\ []) do
     GenServer.start_link(__MODULE__, path, opts)
@@ -10,42 +12,57 @@ defmodule Postnord.Partition do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(Postnord.MessageLog, [path <> "/message.log", [name: Postnord.MessageLog]]),
-      worker(Postnord.IndexLog, [path <> "/index.log", [name: Postnord.IndexLog]])
+      worker(MessageLog, [message_log_state(path), [name: MessageLog]]),
+      worker(IndexLog, [index_log_state(path), [name: IndexLog]])
     ]
 
     Supervisor.start_link(children, [strategy: :one_for_one])
     {:ok, nil}
   end
 
+  defp message_log_state(path) do
+    env = Application.get_env(:postnord, MessageLog, [])
+    %Postnord.MessageLog.State{
+      buffer_size: env |> Keyword.get(:buffer_size),
+      flush_timeout: env |> Keyword.get(:flush_timeout),
+      path: Path.join(path, "message.log")
+    }
+  end
+
+  defp index_log_state(path) do
+    env = Application.get_env(:postnord, IndexLog, [])
+    %Postnord.IndexLog.State{
+      buffer_size: env |> Keyword.get(:buffer_size),
+      flush_timeout: env |> Keyword.get(:flush_timeout),
+      path: Path.join(path, "index.log")
+    }
+  end
+
   @doc """
   Writes a single message to the partition.
   """
-  @spec write_message(pid, pid, binary()) :: {:ok} | {:error, any()}
-  def write_message(pid, caller, bytes, timeout \\ 5_000) do
-    GenServer.cast(pid, {:write, caller, bytes})
-    receive do
-      {:write_ok} -> :ok
-    after
-      timeout -> {:error, :timeout}
-    end
+  @spec write_message(pid, binary()) :: {:ok} | {:error, any()}
+  def write_message(pid, bytes, timeout \\ 5_000) do
+    :ok = GenServer.call(pid, {:write, bytes}, timeout)
   end
 
-  def handle_cast({:write, caller, bytes}, nil) do
+  def handle_call({:write, bytes}, from, nil) do
+    Logger.debug "Got write call"
     id = Postnord.now(:nanosecond) # TODO: ID Generator
-    Postnord.MessageLog.write(Postnord.MessageLog, self(), bytes, {caller, id})
+    Postnord.MessageLog.write(Postnord.MessageLog, bytes, {from, id})
     {:noreply, nil}
   end
 
-  def handle_cast({:write_messagelog_ok, offset, len, {caller, id}}, nil) do
+  def handle_cast({:write_messagelog_ok, offset, len, {from, id}}, nil) do
+    Logger.debug "Got write_messagelog call"
     entry = %Postnord.IndexLog.Entry{id: id, offset: offset, len: len}
-    Postnord.IndexLog.write(Postnord.IndexLog, self(), entry, {caller})
+    Postnord.IndexLog.write(Postnord.IndexLog, entry, {from})
     {:noreply, nil}
   end
 
-  def handle_cast({:write_indexlog_ok, {caller}}, nil) do
-    send caller, {:write_ok}
+  def handle_cast({:write_indexlog_ok, {from}}, nil) do
+    Logger.debug "Got write_indexlog call"
+    GenServer.reply(from, :ok)
     {:noreply, nil}
   end
-
 end

@@ -1,63 +1,91 @@
+defmodule Postnord.IndexLog.State do
+  defstruct path: "",
+            iodevice: nil,
+            buffer: <<>>,
+            buffer_size: 0,
+            flush_timeout: 10,
+            callbacks: []
+end
+
 defmodule Postnord.IndexLog do
   require Logger
   use GenServer
   alias Postnord.IndexLog.Entry, as: Entry
+  alias Postnord.IndexLog.State, as: State
 
   @moduledoc """
   Appends message indexes to the index log
 
-  state :: {file, offset, buffer, pending}
+  state :: {file, offset, buffer, callback}
 
   file :: append-only message log file iodevice
   buffer :: data buffer to write
-  respond :: responses to send on write
+  callback :: callback processes to notify on write
   """
 
   @file_opts [:binary, :append]
-  @buffer_size 0 #8192
 
-  def start_link(path, opts \\ []) do
-    GenServer.start_link(__MODULE__, path, opts)
+  def start_link(args, opts \\ []) do
+    GenServer.start_link(__MODULE__, args, opts)
   end
 
-  def init(path) do
+  def init(state) do
     # Open output file
-    path_abs = Path.absname(path)
-    file = File.open!(path_abs, @file_opts)
-    Logger.info "Writing: #{path_abs}"
+    Logger.info "Opening: #{Path.absname(state.path)}"
+    file = File.open!(state.path, @file_opts)
 
-    {:ok, {file, <<>>, []}}
+    {:ok, %State{state | iodevice: file}}
   end
 
   @doc """
   Write a message index to the log
   """
-  def write(pid, from, entry, metadata) do
-    GenServer.cast(pid, {:write, from, entry, metadata})
+  def write(pid, entry, metadata) do
+    GenServer.cast(pid, {:write, self(), entry, metadata})
   end
 
-  def handle_cast({:write, from, entry, metadata},
-                  {file, buffer, pending}) do
+  def handle_cast({:write, from, entry, metadata}, state) do
 
-    pending = [{from, metadata} | pending]
-    buffer = buffer <> Entry.as_bytes(entry)
+    state = buffer(state, from, entry, metadata)
 
-    if byte_size(buffer) >= @buffer_size do
-      # Flush buffer
-      flush(file, buffer, pending)
-      {:noreply, {file, <<>>, []}}
+    if byte_size(state.buffer) >= state.buffer_size do
+      {:noreply, flush(state)}
     else
-      # Buffer data
-      {:noreply, {file, buffer, pending}}
+      {:noreply, state, state.flush_timeout}
     end
   end
 
-  defp flush(file, buffer, pending) do
+  @doc """
+  Flushes buffer to disk if process receives no messages within flush_timeout ms
+  """
+  def handle_info(:timeout, state) do
+    {:noreply, flush(state)}
+  end
+
+  @doc """
+  Buffer incoming data for the next write, and add the `from` process to the
+  callbacks list.
+  """
+  defp buffer(state, from, entry, metadata) do
+    %State{state | callbacks: [{from, metadata} | state.callbacks],
+                   buffer: state.buffer <> Entry.as_bytes(entry)}
+  end
+
+  @doc """
+  Persist the write buffer to disk and notify all in callbacks list.
+  """
+  defp flush(state) do
     spawn fn ->
-      :ok = IO.binwrite(file, buffer)
-      pending |> Enum.each(fn {from, metadata} ->
-        GenServer.cast(from, {:write_indexlog_ok, metadata})
-      end)
+      case IO.binwrite(state.iodevice, state.buffer) do
+        :ok ->
+          state.callbacks |> Enum.each(fn {from, metadata} ->
+            GenServer.cast(from, {:write_indexlog_ok, metadata})
+          end)
+        {:error, reason} ->
+          #TODO
+          Logger.error("Failed writing to index log: #{inspect reason}")
+      end
     end
+    %State{state | buffer: <<>>, callbacks: []}
   end
 end
