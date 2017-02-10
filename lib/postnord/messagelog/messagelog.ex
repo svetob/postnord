@@ -34,7 +34,11 @@ defmodule Postnord.MessageLog do
   end
 
   def init(state) do
-    # Open output file
+    # Create output directory
+    :ok = state.path
+    |> Path.dirname()
+    |> File.mkdir_p()
+
     Logger.info "Opening: #{Path.absname(state.path)}"
     file = File.open!(state.path, @file_opts)
     {:ok, %State{state | iodevice: file}}
