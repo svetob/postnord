@@ -30,6 +30,11 @@ defmodule Postnord.IndexLog do
   end
 
   def init(state) do
+    # Create output directory
+    :ok = state.path
+    |> Path.dirname()
+    |> File.mkdir_p()
+    
     # Open output file
     Logger.info "Opening: #{Path.absname(state.path)}"
     file = File.open!(state.path, @file_opts)
