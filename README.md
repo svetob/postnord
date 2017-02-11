@@ -31,3 +31,15 @@ postnord should:
 - run well at any scale
 - be stable and reliable at any scale
 - have only basic and absolutely required features
+
+## build and test
+
+```
+mix deps.get
+mix postnord.indextest
+```
+
+This will write some test data to `./data/` and measure write performance.
+
+Tweak indextest settings to experiment with performance of e.g. small vs big
+messages, or few vs many writers. See `mix help postnord.indextest`

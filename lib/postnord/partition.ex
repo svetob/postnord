@@ -43,7 +43,7 @@ defmodule Postnord.Partition do
   """
   @spec write_message(pid, binary()) :: {:ok} | {:error, any()}
   def write_message(pid, bytes, timeout \\ 5_000) do
-    :ok = GenServer.call(pid, {:write, bytes}, timeout)
+    :ok = GenServer.call(pid, {:write, bytes}, timeout) # TODO timeout is not triggering, investigate and fix
   end
 
   def handle_call({:write, bytes}, from, nil) do
