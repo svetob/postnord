@@ -3,6 +3,7 @@ defmodule Postnord.Partition do
   use GenServer
   alias Postnord.MessageLog, as: MessageLog
   alias Postnord.IndexLog, as: IndexLog
+  alias Postnord.Reader.Partition, as: PartitionReader
 
   def start_link(path, opts \\ []) do
     GenServer.start_link(__MODULE__, path, opts)
@@ -13,7 +14,8 @@ defmodule Postnord.Partition do
 
     children = [
       worker(MessageLog, [message_log_state(path), [name: MessageLog]]),
-      worker(IndexLog, [index_log_state(path), [name: IndexLog]])
+      worker(IndexLog, [index_log_state(path), [name: IndexLog]]),
+      worker(PartitionReader, [partition_reader_state(path), [name: PartitionReader]])
     ]
 
     Supervisor.start_link(children, [strategy: :one_for_one])
@@ -37,6 +39,11 @@ defmodule Postnord.Partition do
       path: Path.join(path, "index.log")
     }
   end
+
+  defp partition_reader_state(path) do
+    %Postnord.Reader.Partition.State{path: path}
+  end
+
 
   @doc """
   Writes a single message to the partition.
