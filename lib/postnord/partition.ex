@@ -27,7 +27,7 @@ defmodule Postnord.Partition do
     %Postnord.MessageLog.State{
       buffer_size: env |> Keyword.get(:buffer_size),
       flush_timeout: env |> Keyword.get(:flush_timeout),
-      path: Path.join(path, "message.log")
+      path: path
     }
   end
 

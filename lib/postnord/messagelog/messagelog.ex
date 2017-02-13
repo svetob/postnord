@@ -27,6 +27,7 @@ defmodule Postnord.MessageLog do
   TODO: close(pid)
   """
 
+  @file_name "message.log"
   @file_opts [:binary, :append]
 
   def start_link(args, opts \\ []) do
@@ -35,13 +36,12 @@ defmodule Postnord.MessageLog do
 
   def init(state) do
     # Create output directory
-    :ok = state.path
-    |> Path.dirname()
-    |> File.mkdir_p()
+    :ok = state.path |> File.mkdir_p()
 
     # Open output file
-    Logger.info "Appending to: #{Path.absname(state.path)}"
-    file = File.open!(state.path, @file_opts)
+    filepath = Path.join(state.path, @file_name)
+    file = File.open!(filepath, @file_opts)
+    Logger.info "Appending to: #{Path.absname(filepath)}"
 
     {:ok, %State{state | iodevice: file}}
   end
@@ -70,9 +70,12 @@ defmodule Postnord.MessageLog do
     {:noreply, flush(state)}
   end
 
+  def terminate(reason, state) do
+    Logger.debug "Message log terminating: #{inspect reason}"
+  end
+
   @doc """
-  Buffer incoming data for the next write, and add the `from` process to the
-  callbacks list.
+  Buffer bytes for next write, add `from` process to callbacks list.
   """
   defp buffer(state, from, bytes, metadata) do
     len = byte_size(bytes)
@@ -82,14 +85,13 @@ defmodule Postnord.MessageLog do
   end
 
   @doc """
-  Persist the write buffer to disk and notify all in callbacks list.
+  Persist write buffer to disk, notify all in callbacks list.
   """
   defp flush(state) do
     spawn fn ->
       Logger.debug "Flushing messagelog buffer"
-      case IO.binwrite(state.iodevice, state.buffer) do
+      case :file.write(state.iodevice, state.buffer) do
         :ok ->
-          Logger.debug "Flushing messagelog buffer :ok"
           state.callbacks |> Enum.each(fn {from, offset, len, metadata} ->
             GenServer.cast(from, {:write_messagelog_ok, offset, len, metadata})
           end)

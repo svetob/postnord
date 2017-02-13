@@ -16,3 +16,5 @@ config :postnord, Postnord.MessageLog,
 config :logger,
     level: :info,
     compile_time_purge_level: :info
+
+import_config "#{Mix.env}.exs"
