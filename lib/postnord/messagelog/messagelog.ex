@@ -41,7 +41,7 @@ defmodule Postnord.MessageLog do
     # Open output file
     filepath = Path.join(state.path, @file_name)
     file = File.open!(filepath, @file_opts)
-    Logger.info "Appending to: #{Path.absname(filepath)}"
+    Logger.debug "Appending to: #{Path.absname(filepath)}"
 
     {:ok, %State{state | iodevice: file}}
   end
@@ -49,7 +49,7 @@ defmodule Postnord.MessageLog do
   @doc """
   Write a message to the log
   """
-  def write(pid, bytes, metadata) do
+  def write(pid, bytes, metadata, callback \\ self()) do
     GenServer.cast(pid, {:write, self(), bytes, metadata})
   end
 
@@ -89,7 +89,6 @@ defmodule Postnord.MessageLog do
   """
   defp flush(state) do
     spawn fn ->
-      Logger.debug "Flushing messagelog buffer"
       case :file.write(state.iodevice, state.buffer) do
         :ok ->
           state.callbacks |> Enum.each(fn {from, offset, len, metadata} ->
