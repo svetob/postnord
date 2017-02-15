@@ -5,7 +5,6 @@ defmodule Postnord.Reader.Partition.State do
             messagelog_iodevice: nil,
             indexlog_path: "",
             indexlog_iodevice: nil,
-            indexlog_bytes: 0,
             indexlog_bytes_read: 0
 end
 
@@ -70,20 +69,25 @@ defmodule Postnord.Reader.Partition do
   defp ensure_open(state), do: state |> ensure_open_indexlog |> ensure_open_messagelog
 
   defp ensure_open_indexlog(%State{indexlog_iodevice: nil} = state)  do
-    Logger.info "Reading: #{Path.absname(state.indexlog_path)}"
     case File.open(state.indexlog_path, @file_opts)  do
-      {:ok, iodevice} -> {:ok, %State{state | indexlog_iodevice: iodevice}}
-      {:error, reason} -> {:error, reason}
+      {:ok, iodevice} ->
+        Logger.debug "Reading: #{Path.absname(state.indexlog_path)}"
+        {:ok, %State{state | indexlog_iodevice: iodevice}}
+      {:error, reason} ->
+        Logger.error("Failed to open #{Path.absname(state.indexlog_path)}: #{inspect reason}")
+        {:error, reason}
     end
   end
   defp ensure_open_indexlog(state), do: {:ok, state}
 
   defp ensure_open_messagelog({:ok, %State{messagelog_iodevice: nil} = state})  do
-    IO.inspect state
-    Logger.info "Reading: #{Path.absname(state.messagelog_path)}"
     case File.open(state.messagelog_path, @file_opts)  do
-      {:ok, iodevice} -> {:ok, %State{state | messagelog_iodevice: iodevice}}
-      {:error, reason} -> {:error, reason}
+      {:ok, iodevice} ->
+        Logger.debug "Reading: #{Path.absname(state.messagelog_path)}"
+        {:ok, %State{state | messagelog_iodevice: iodevice}}
+      {:error, reason} ->
+        Logger.error("Failed to open #{Path.absname(state.messagelog_path)}: #{inspect reason}")
+        {:error, reason}
     end
   end
   defp ensure_open_messagelog({:ok, state}), do: {:ok, state}
@@ -91,7 +95,6 @@ defmodule Postnord.Reader.Partition do
 
   @spec next_index({:ok, State.t()}) :: {:ok, State, Entry} | :empty | {:error, any()}
   defp next_index({:ok, state}) do
-    Logger.info "Reading index, offset #{state.indexlog_bytes_read}, len #{@entry_size}"
     case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, @entry_size) do
       :eof -> :empty
       {:error, reason} -> {:error, reason}
@@ -106,13 +109,16 @@ defmodule Postnord.Reader.Partition do
 
   @spec read_entry({:ok, State.t(), Entry.t()}) :: {:ok, State.t(), Entry.t(), binary} | :empty | {:error, any()}
   defp read_entry({:ok, state, entry}) do
-    Logger.info "Reading message, offset #{entry.offset}, len #{entry.len}"
-    case :file.pread(state.messagelog_iodevice, entry.offset, entry.len) do
+    len = entry.len
+    case :file.pread(state.messagelog_iodevice, entry.offset, len) do
       :eof -> :empty
       {:error, reason} -> {:error, reason}
-      {:ok, bytes} -> {:ok, state, entry, bytes}
+      {:ok, bytes} when byte_size(bytes) != len ->
+        Logger.warn("Message size #{byte_size bytes} did not match expected size #{len}, assuming message is not fully written to disk yet")
+        :empty
+      {:ok, bytes}  -> {:ok, state, entry, bytes}
     end
   end
   defp read_entry(:empty), do: :empty
-  defp read_entry({:error, reason}), do: :empty
+  defp read_entry({:error, reason}), do: {:error, reason}
 end

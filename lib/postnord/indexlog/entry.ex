@@ -10,7 +10,6 @@ defmodule Postnord.IndexLog.Entry do
 
   def from_bytes(bytes) do
     # TODO Assert bytes size
-    Logger.info "Converting to index: #{inspect bytes}"
     %Postnord.IndexLog.Entry{id:     from_binary(binary_part(bytes, 0, 8)),
                              offset: from_binary(binary_part(bytes, 8, 8)),
                              len:    from_binary(binary_part(bytes, 16, 8))}
