@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Postnord.Indextest do
+defmodule Mix.Tasks.Postnord.Perftest.Write do
   require Logger
   use Mix.Task
 
@@ -15,8 +15,8 @@ defmodule Mix.Tasks.Postnord.Indextest do
   ## Command line options
 
     * `-m`, `--msgbytes` - message size in bytes (default: 102400)
+    * `-e`, `--entries` - number of entries to write (default: 10000)
     * `-w`, `--writers` - number of concurrent writer processes (default: 100)
-    * `-e`, `--entries` - number of entries to write per writer process (default: 100)
   """
 
   def run(args) do
@@ -26,7 +26,7 @@ defmodule Mix.Tasks.Postnord.Indextest do
 
     launch()
 
-    index_test(
+    write_test(
         opts[:msgbytes] || 100 * 1024,
         opts[:writers] || 100,
         opts[:entries] || 100)
@@ -36,30 +36,31 @@ defmodule Mix.Tasks.Postnord.Indextest do
     Postnord.start(nil, nil)
   end
 
-  defp index_test(msgbytes, writers, entries) do
+  defp write_test(msgbytes, writers, entries) do
     msg = :erlang.iolist_to_binary(RandomBytes.base16(Integer.floor_div(msgbytes, 2)))
-
-    Logger.info "Index test: #{inspect writers} writers, #{inspect entries} entries at #{Float.to_string(byte_size(msg)/ 1024)}kb each"
+    entries_each = div(entries, writers)
     me = self()
+
+    Logger.info "Write test: #{writers} writers, #{entries_each} entries each at #{Float.to_string(byte_size(msg)/ 1024)}kb each"
     start = Postnord.now()
 
     1..writers
-      |> Enum.map(fn x ->
-        spawn fn ->
-          Enum.each(1..entries, fn _ ->
-            Postnord.Partition.write_message(Postnord.Partition, msg)
-          end)
-          send me, :ok
-        end
-      end)
-      |> Enum.each(fn _ ->
-        receive do
-          :ok -> :ok
-        end
-      end)
+    |> Enum.map(fn _ ->
+      spawn fn ->
+        1..entries_each |> Enum.each(fn _ ->
+          Postnord.Partition.write_message(Postnord.Partition, msg)
+        end)
+        send me, :ok
+      end
+    end)
+    |> Enum.each(fn _ ->
+      receive do
+        :ok -> :ok
+      end
+    end)
 
-    wrote_mb = (byte_size(msg) * entries * writers) / (1024*1024)
-    wrote_entries = entries * writers
+    wrote_entries = entries_each * writers
+    wrote_mb = (byte_size(msg) * wrote_entries) / (1024*1024)
     wrote_time_s = (Postnord.now() - start) / 1000
     Logger.info("Wrote " <>
         "#{Float.to_string(wrote_mb)}Mb, " <>

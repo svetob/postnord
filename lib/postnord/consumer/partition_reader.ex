@@ -62,7 +62,7 @@ defmodule Postnord.Reader.Partition do
     case state |> ensure_open |> next_index |> read_entry do
       :empty -> {:reply, :empty, state}
       {:error, reason} -> {:reply, {:error, reason}, state}
-      {:ok, state, entry, bytes} -> {:reply, {:ok, bytes}, state}
+      {:ok, state, bytes} -> {:reply, {:ok, bytes}, state}
     end
   end
 
@@ -90,8 +90,8 @@ defmodule Postnord.Reader.Partition do
         {:error, reason}
     end
   end
-  defp ensure_open_messagelog({:ok, state}), do: {:ok, state}
-  defp ensure_open_messagelog({:error, reason}), do: {:error, reason}
+  defp ensure_open_messagelog({:ok, state} = ok), do: ok
+  defp ensure_open_messagelog({:error, reason} = error), do: error
 
   @spec next_index({:ok, State.t()}) :: {:ok, State, Entry} | :empty | {:error, any()}
   defp next_index({:ok, state}) do
@@ -105,7 +105,7 @@ defmodule Postnord.Reader.Partition do
     end
   end
   defp next_index(:empty), do: :empty
-  defp next_index({:error, reason}), do: {:error, reason}
+  defp next_index({:error, reason} = error), do: error
 
   @spec read_entry({:ok, State.t(), Entry.t()}) :: {:ok, State.t(), Entry.t(), binary} | :empty | {:error, any()}
   defp read_entry({:ok, state, entry}) do
@@ -116,7 +116,7 @@ defmodule Postnord.Reader.Partition do
       {:ok, bytes} when byte_size(bytes) != len ->
         Logger.warn("Message size #{byte_size bytes} did not match expected size #{len}, assuming message is not fully written to disk yet")
         :empty
-      {:ok, bytes}  -> {:ok, state, entry, bytes}
+      {:ok, bytes}  -> {:ok, state, bytes}
     end
   end
   defp read_entry(:empty), do: :empty
