@@ -1,6 +1,8 @@
 language: elixir
 elixir:
   - 1.4.1
+otp_release:
+  - 19.2.0
 
 script:
   - mix credo -a
