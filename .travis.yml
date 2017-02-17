@@ -5,7 +5,7 @@ otp_release:
   - 19.2
 
 script:
-  - mix credo -a
+#  - mix credo -a
   - mix test
 
 notifications:
