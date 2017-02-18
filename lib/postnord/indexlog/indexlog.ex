@@ -27,7 +27,7 @@ defmodule Postnord.IndexLog do
   callback :: callback processes to notify on write
   """
 
-  @file_opts [:binary, :append]
+  @file_opts [:append]
 
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)

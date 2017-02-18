@@ -2,7 +2,7 @@ defmodule Postnord.Reader.Partition.State do
   @moduledoc """
   State struct for partition reader.
   """
-  
+
   defstruct path: "",
             entries_read: 0,
             messagelog_path: "",
@@ -45,7 +45,7 @@ defmodule Postnord.Reader.Partition do
   - ACCEPT / REJECT / REQUEUE of messages
   """
 
-  @file_opts [:read]
+  @file_opts [:read, :raw, :binary]
   @entry_size 24 # TODO Move to a better place
 
   def start_link(args, opts \\ []) do
