@@ -3,7 +3,7 @@ defmodule Postnord.Partition do
   use GenServer
   alias Postnord.MessageLog, as: MessageLog
   alias Postnord.IndexLog, as: IndexLog
-  alias Postnord.Reader.Partition, as: PartitionReader
+  alias Postnord.Consumer.Partition, as: PartitionConsumer
 
   @moduledoc """
   Managing GenServer for a single message queue partition.
@@ -21,7 +21,7 @@ defmodule Postnord.Partition do
     children = [
       worker(MessageLog, [message_log_state(path), [name: MessageLog]]),
       worker(IndexLog, [index_log_state(path), [name: IndexLog]]),
-      worker(PartitionReader, [partition_reader_state(path), [name: PartitionReader]])
+      worker(PartitionConsumer, [partition_reader_state(path), [name: PartitionConsumer]])
     ]
 
     Supervisor.start_link(children, [strategy: :one_for_one])
@@ -47,7 +47,7 @@ defmodule Postnord.Partition do
   end
 
   defp partition_reader_state(path) do
-    %Postnord.Reader.Partition.State{path: path}
+    %Postnord.Consumer.Partition.State{path: path}
   end
 
   @doc """

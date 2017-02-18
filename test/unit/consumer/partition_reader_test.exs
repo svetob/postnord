@@ -1,17 +1,17 @@
-defmodule Postnord.Test.Reader.Partition do
+defmodule Postnord.Test.Consumer.Partition do
   use ExUnit.Case, async: false
 
   require Logger
   alias Postnord.IndexLog.Entry, as: Entry
-  alias Postnord.Reader.Partition.State, as: State
-  alias Postnord.Reader.Partition, as: PartitionReader
+  alias Postnord.Consumer.Partition.State, as: State
+  alias Postnord.Consumer.Partition, as: PartitionConsumer
 
   @path Application.get_env(:postnord, :test_data_path)
   @path_message_log Path.join(@path, "message.log")
   @path_index_log Path.join(@path, "index.log")
 
   setup do
-    {:ok, pid} = PartitionReader.start_link(%State{path: @path})
+    {:ok, pid} = PartitionConsumer.start_link(%State{path: @path})
 
     # Create output directory
     :ok = @path
@@ -32,32 +32,32 @@ defmodule Postnord.Test.Reader.Partition do
     msgs = ["foo"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionReader.read(context[:pid])
+    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
   end
 
   test "Reads values from file in order", context do
     msgs = ["foo", "bar", "cats"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionReader.read(context[:pid])
-    assert {:ok, "bar"} == PartitionReader.read(context[:pid])
-    assert {:ok, "cats"} == PartitionReader.read(context[:pid])
+    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    assert {:ok, "bar"} == PartitionConsumer.read(context[:pid])
+    assert {:ok, "cats"} == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :empty if file is empty", context do
     write_data([], entries_for([]))
 
-    assert :empty == PartitionReader.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :empty if no more entries exist", context do
     msgs = ["foo"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionReader.read(context[:pid])
-    assert :empty == PartitionReader.read(context[:pid])
-    assert :empty == PartitionReader.read(context[:pid])
-    assert :empty == PartitionReader.read(context[:pid])
+    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :empty if data for entry not written yet", context do
@@ -65,8 +65,8 @@ defmodule Postnord.Test.Reader.Partition do
     entries = entries_for ["foo", "bar"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionReader.read(context[:pid])
-    assert :empty == PartitionReader.read(context[:pid])
+    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :empty if entry for data not written yet", context do
@@ -74,8 +74,8 @@ defmodule Postnord.Test.Reader.Partition do
     entries = entries_for(["foo"])
     write_data(msgs, entries)
 
-    assert {:ok, "foo"} == PartitionReader.read(context[:pid])
-    assert :empty == PartitionReader.read(context[:pid])
+    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :empty if data for entry only partially written", context do
@@ -83,22 +83,22 @@ defmodule Postnord.Test.Reader.Partition do
     entries = entries_for(["foo", "bar"])
     write_data(msgs, entries)
 
-    assert {:ok, "foo"} == PartitionReader.read(context[:pid])
-    assert :empty == PartitionReader.read(context[:pid])
+    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    assert :empty == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :error if message log does not exist", context do
     write_data(["foo"], entries_for(["foo"]))
     File.rm(@path_message_log)
 
-    assert {:error, :enoent} == PartitionReader.read(context[:pid])
+    assert {:error, :enoent} == PartitionConsumer.read(context[:pid])
   end
 
   test "Returns :error if index log does not exist", context do
     write_data(["foo"], entries_for(["foo"]))
     File.rm(@path_index_log)
 
-    assert {:error, :enoent} == PartitionReader.read(context[:pid])
+    assert {:error, :enoent} == PartitionConsumer.read(context[:pid])
   end
 
 

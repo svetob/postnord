@@ -1,14 +1,17 @@
 defmodule Postnord.IndexLog.Entry do
+  require Logger
+
   @moduledoc """
   Index log entry definition.
 
   An entry contains the ID, size, and disk location of a single message.
   """
+  # TODO: Improve storage format
 
   defstruct id: 0, offset: 0, len: 0
 
-  # TODO: Improve storage format
-  require Logger
+  @byte_size 24
+  def byte_size, do: @byte_size
 
   def as_bytes(entry) do
     to_binary(entry.id, 8) <> to_binary(entry.offset, 8) <> to_binary(entry.len, 8)

@@ -87,7 +87,7 @@ defmodule Postnord.Perftest do
 
   defp read(from, 0), do: send from, :ok
   defp read(from, remain) do
-    case Postnord.Reader.Partition.read(Postnord.Reader.Partition) do
+    case Postnord.Consumer.Partition.read(Postnord.Consumer.Partition) do
       {:ok, _} -> read(from, remain - 1)
       :empty ->
         #Logger.warn "Empty"
