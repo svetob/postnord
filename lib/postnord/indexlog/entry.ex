@@ -1,4 +1,10 @@
 defmodule Postnord.IndexLog.Entry do
+  @moduledoc """
+  Index log entry definition.
+
+  An entry contains the ID, size, and disk location of a single message.
+  """
+
   defstruct id: 0, offset: 0, len: 0
 
   # TODO: Improve storage format
@@ -17,7 +23,7 @@ defmodule Postnord.IndexLog.Entry do
 
   defp to_binary(value, bytes) do
     digits = Integer.digits(value, 256)
-    padded = List.duplicate(0, bytes-length(digits)) ++ digits
+    padded = List.duplicate(0, bytes - length(digits)) ++ digits
     :erlang.iolist_to_binary(padded)
   end
 

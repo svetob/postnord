@@ -5,6 +5,12 @@ defmodule Postnord.Partition do
   alias Postnord.IndexLog, as: IndexLog
   alias Postnord.Reader.Partition, as: PartitionReader
 
+  @moduledoc """
+  Managing GenServer for a single message queue partition.
+
+  Supervises child processes for partition, distributes messages to them.
+  """
+
   def start_link(path, opts \\ []) do
     GenServer.start_link(__MODULE__, path, opts)
   end
@@ -44,26 +50,24 @@ defmodule Postnord.Partition do
     %Postnord.Reader.Partition.State{path: path}
   end
 
-
   @doc """
   Writes a single message to the partition.
   """
-  @spec write_message(pid, binary()) :: {:ok} | {:error, any()}
   def write_message(pid, bytes, timeout \\ 5_000) do
-    :ok = GenServer.call(pid, {:write, bytes}, timeout) # TODO timeout is not triggering, investigate and fix
+    GenServer.call(pid, {:write, bytes}, timeout) # FIXME timeout is not triggering
   end
 
   def handle_call({:write, bytes}, from, nil) do
     Logger.debug "Got write call"
     id = Postnord.now(:nanosecond) # TODO: ID Generator
-    Postnord.MessageLog.write(Postnord.MessageLog, bytes, {from, id})
+    MessageLog.write(Postnord.MessageLog, bytes, {from, id})
     {:noreply, nil}
   end
 
   def handle_cast({:write_messagelog_ok, offset, len, {from, id}}, nil) do
     Logger.debug "Got write_messagelog call"
     entry = %Postnord.IndexLog.Entry{id: id, offset: offset, len: len}
-    Postnord.IndexLog.write(Postnord.IndexLog, entry, {from})
+    IndexLog.write(Postnord.IndexLog, entry, {from})
     {:noreply, nil}
   end
 

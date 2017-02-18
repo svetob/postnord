@@ -1,4 +1,8 @@
 defmodule Postnord.Reader.Partition.State do
+  @moduledoc """
+  State struct for partition reader.
+  """
+  
   defstruct path: "",
             entries_read: 0,
             messagelog_path: "",
@@ -53,7 +57,6 @@ defmodule Postnord.Reader.Partition do
                          indexlog_path: Path.join(state.path, "index.log")}}
   end
 
-  @spec read(pid) :: {:ok, binary} | :empty | {:error, any}
   def read(pid) do
     GenServer.call(pid, :read)
   end
@@ -93,7 +96,6 @@ defmodule Postnord.Reader.Partition do
   defp ensure_open_messagelog({:ok, state} = ok), do: ok
   defp ensure_open_messagelog({:error, reason} = error), do: error
 
-  @spec next_index({:ok, State.t()}) :: {:ok, State, Entry} | :empty | {:error, any()}
   defp next_index({:ok, state}) do
     case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, @entry_size) do
       :eof -> :empty
@@ -107,7 +109,6 @@ defmodule Postnord.Reader.Partition do
   defp next_index(:empty), do: :empty
   defp next_index({:error, reason} = error), do: error
 
-  @spec read_entry({:ok, State.t(), Entry.t()}) :: {:ok, State.t(), Entry.t(), binary} | :empty | {:error, any()}
   defp read_entry({:ok, state, entry}) do
     len = entry.len
     case :file.pread(state.messagelog_iodevice, entry.offset, len) do

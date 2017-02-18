@@ -33,7 +33,10 @@ defmodule Postnord.Mixfile do
   defp deps do
     [
       {:random_bytes, "~> 1.0"},
-      {:credo, "~> 0.5", only: :dev}
+
+      # Dev tools
+      {:credo, "~> 0.5", only: :dev, runtime: false},
+      {:dialyxir, "~> 0.4", only: :dev, runtime: false}
     ]
   end
 end

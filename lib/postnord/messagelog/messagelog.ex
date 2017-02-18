@@ -1,4 +1,8 @@
 defmodule Postnord.MessageLog.State do
+  @moduledoc """
+  State struct for message log.
+  """
+
   defstruct path: "",
             iodevice: nil,
             offset: 0,
@@ -90,15 +94,18 @@ defmodule Postnord.MessageLog do
   defp flush(state) do
     spawn fn ->
       case :file.write(state.iodevice, state.buffer) do
-        :ok ->
-          state.callbacks |> Enum.each(fn {from, offset, len, metadata} ->
-            GenServer.cast(from, {:write_messagelog_ok, offset, len, metadata})
-          end)
+        :ok -> send_callbacks(state.callbacks)
         {:error, reason} ->
-          #TODO
+          # TODO Handle error when persisting
           Logger.error("Failed writing to message log: #{inspect reason}")
       end
     end
     %State{state | buffer: <<>>, callbacks: []}
+  end
+
+  defp send_callbacks(callbacks) do
+    callbacks |> Enum.each(fn {from, offset, len, metadata} ->
+      GenServer.cast(from, {:write_messagelog_ok, offset, len, metadata})
+    end)
   end
 end

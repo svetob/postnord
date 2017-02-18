@@ -1,5 +1,6 @@
 defmodule Mix.Tasks.Postnord.Perftest.Read do
   require Logger
+  import Postnord.Perftest
   use Mix.Task
 
   @shortdoc "Index performance test"
@@ -28,39 +29,5 @@ defmodule Mix.Tasks.Postnord.Perftest.Read do
     read_test(
         opts[:readers] || 100,
         opts[:entries] || 10)
-  end
-
-  defp launch() do
-    Postnord.start(nil, nil)
-  end
-
-  defp read_test(readers, entries) do
-    entries_each = div(entries, readers)
-    me = self()
-
-    Logger.info "Read test: #{readers} readers reading #{entries_each} entries each"
-    start = Postnord.now()
-
-    1..readers
-    |> Enum.map(fn _ ->
-      spawn fn ->
-        1..entries_each |> Enum.each(fn _ ->
-          {:ok, _} = Postnord.Reader.Partition.read(Postnord.Reader.Partition)
-        end)
-        send me, :ok
-      end
-    end)
-    |> Enum.each(fn _ ->
-      receive do
-        :ok -> :ok
-      end
-    end)
-
-    read_entries = entries_each * readers
-    read_time_s = (Postnord.now() - start) / 1000
-    Logger.info("Read " <>
-        "#{Integer.to_string(read_entries)} entries in " <>
-        "#{Float.to_string(read_time_s)}s at " <>
-        "#{Float.to_string(read_entries / read_time_s)}dps")
   end
 end
