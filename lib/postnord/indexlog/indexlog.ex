@@ -1,4 +1,8 @@
 defmodule Postnord.IndexLog.State do
+  @moduledoc """
+  State struct for index log.
+  """
+
   defstruct path: "",
             iodevice: nil,
             buffer: <<>>,
@@ -34,7 +38,7 @@ defmodule Postnord.IndexLog do
     :ok = state.path
     |> Path.dirname()
     |> File.mkdir_p()
-    
+
     # Open output file
     Logger.info "Opening: #{Path.absname(state.path)}"
     file = File.open!(state.path, @file_opts)
@@ -82,15 +86,18 @@ defmodule Postnord.IndexLog do
   defp flush(state) do
     spawn fn ->
       case IO.binwrite(state.iodevice, state.buffer) do
-        :ok ->
-          state.callbacks |> Enum.each(fn {from, metadata} ->
-            GenServer.cast(from, {:write_indexlog_ok, metadata})
-          end)
+        :ok -> send_callbacks(state.callbacks)
         {:error, reason} ->
-          #TODO
+          # TODO Handle error when persisting
           Logger.error("Failed writing to index log: #{inspect reason}")
       end
     end
     %State{state | buffer: <<>>, callbacks: []}
+  end
+
+  defp send_callbacks(callbacks) do
+    callbacks |> Enum.each(fn {from, metadata} ->
+      GenServer.cast(from, {:write_indexlog_ok, metadata})
+    end)
   end
 end

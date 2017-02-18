@@ -1,5 +1,6 @@
 defmodule Mix.Tasks.Postnord.Perftest.Write do
   require Logger
+  import Postnord.Perftest
   use Mix.Task
 
   @shortdoc "Index performance test"
@@ -30,42 +31,5 @@ defmodule Mix.Tasks.Postnord.Perftest.Write do
         opts[:msgbytes] || 100 * 1024,
         opts[:writers] || 100,
         opts[:entries] || 100)
-  end
-
-  defp launch() do
-    Postnord.start(nil, nil)
-  end
-
-  defp write_test(msgbytes, writers, entries) do
-    msg = :erlang.iolist_to_binary(RandomBytes.base16(Integer.floor_div(msgbytes, 2)))
-    entries_each = div(entries, writers)
-    me = self()
-
-    Logger.info "Write test: #{writers} writers, #{entries_each} entries each at #{Float.to_string(byte_size(msg)/ 1024)}kb each"
-    start = Postnord.now()
-
-    1..writers
-    |> Enum.map(fn _ ->
-      spawn fn ->
-        1..entries_each |> Enum.each(fn _ ->
-          Postnord.Partition.write_message(Postnord.Partition, msg)
-        end)
-        send me, :ok
-      end
-    end)
-    |> Enum.each(fn _ ->
-      receive do
-        :ok -> :ok
-      end
-    end)
-
-    wrote_entries = entries_each * writers
-    wrote_mb = (byte_size(msg) * wrote_entries) / (1024*1024)
-    wrote_time_s = (Postnord.now() - start) / 1000
-    Logger.info("Wrote " <>
-        "#{Float.to_string(wrote_mb)}Mb, " <>
-        "#{Integer.to_string(wrote_entries)} entries in " <>
-        "#{Float.to_string(wrote_time_s)}s at " <>
-        "#{Float.to_string(wrote_entries / wrote_time_s)}dps, #{Float.to_string(wrote_mb / wrote_time_s)}Mbps")
   end
 end
