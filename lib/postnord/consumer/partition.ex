@@ -9,7 +9,8 @@ defmodule Postnord.Consumer.Partition.State do
             messagelog_iodevice: nil,
             indexlog_path: "",
             indexlog_iodevice: nil,
-            indexlog_bytes_read: 0
+            indexlog_bytes_read: 0,
+            tombstones: MapSet.new()
 end
 
 defmodule Postnord.Consumer.Partition do
@@ -19,6 +20,7 @@ defmodule Postnord.Consumer.Partition do
   use GenServer
 
   alias Postnord.Consumer.Partition.State
+  alias Postnord.TombstoneLog.Tombstone
 
   @moduledoc """
   This is a first pass at a consumer process to read from a partition.
@@ -61,13 +63,23 @@ defmodule Postnord.Consumer.Partition do
     GenServer.call(pid, :read)
   end
 
+  def accept(pid, id) do
+    GenServer.call(pid, {:accept, id})
+  end
+
   def handle_call(:read, from, state) do
     case state |> ensure_open |> next_index_entry |> read_message do
       :empty -> {:reply, :empty, state}
       {:error, reason} -> {:reply, {:error, reason}, state}
-      {:ok, state, bytes} -> {:reply, {:ok, bytes}, state}
+      {:ok, state, id, bytes} -> {:reply, {:ok, id, bytes}, state}
     end
   end
+
+  def handle_call({:accept, id}, from, state) do
+    tombstones = state.tombstones |> MapSet.put(%Tombstone{id: id})
+    {:reply, :ok, %State{state | tombstones: tombstones}}
+  end
+
 
   defp ensure_open(state) do
     {:ok, state}

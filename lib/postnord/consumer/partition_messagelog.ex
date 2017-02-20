@@ -32,7 +32,7 @@ defmodule Postnord.Consumer.Partition.MessageLog do
       {:ok, bytes} when byte_size(bytes) != len ->
         Logger.warn("Message size #{byte_size bytes} did not match expected size #{len}, assuming message is not fully written to disk yet")
         :empty
-      {:ok, bytes}  -> {:ok, state, bytes}
+      {:ok, bytes}  -> {:ok, state, entry.id, bytes}
     end
   end
   def read_message(:empty), do: :empty
