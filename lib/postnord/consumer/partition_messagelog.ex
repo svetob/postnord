@@ -19,8 +19,8 @@ defmodule Postnord.Consumer.Partition.MessageLog do
         {:error, reason}
     end
   end
-  def ensure_open_messagelog({:ok, state} = ok), do: ok
-  def ensure_open_messagelog({:error, reason} = error), do: error
+  def ensure_open_messagelog({:ok, _state} = ok), do: ok
+  def ensure_open_messagelog({:error, _reason} = error), do: error
 
   def read_message({:ok, state, entry}) do
     len = entry.len
@@ -36,5 +36,5 @@ defmodule Postnord.Consumer.Partition.MessageLog do
     end
   end
   def read_message(:empty), do: :empty
-  def read_message({:error, reason} = error), do: error
+  def read_message({:error, _reason} = error), do: error
 end

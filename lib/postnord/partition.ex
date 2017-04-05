@@ -2,7 +2,6 @@ defmodule Postnord.Partition do
   require Logger
   use GenServer
 
-  alias Postnord.IdGen
   alias Postnord.MessageLog
   alias Postnord.IndexLog
   alias Postnord.IndexLog.Entry

@@ -48,8 +48,6 @@ defmodule Postnord.Consumer.Partition do
   - ACCEPT / REJECT / REQUEUE of messages
   """
 
-  @file_opts [:read, :raw, :binary]
-
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
   end
@@ -67,7 +65,7 @@ defmodule Postnord.Consumer.Partition do
     GenServer.call(pid, {:accept, id})
   end
 
-  def handle_call(:read, from, state) do
+  def handle_call(:read, _from, state) do
     case state |> ensure_open |> next_index_entry |> read_message do
       :empty -> {:reply, :empty, state}
       {:error, reason} -> {:reply, {:error, reason}, state}
@@ -75,9 +73,14 @@ defmodule Postnord.Consumer.Partition do
     end
   end
 
-  def handle_call({:accept, id}, from, state) do
-    tombstones = state.tombstones |> MapSet.put(%Tombstone{id: id})
-    {:reply, :ok, %State{state | tombstones: tombstones}}
+  def handle_call({:accept, id}, _from, state) do
+    tombstone = %Tombstone{id: id}
+    if (MapSet.member?(state.tombstones, tombstone)) do
+      {:reply, :noop, state}
+    else
+      tombstones = state.tombstones |> MapSet.put(tombstone)
+      {:reply, :ok, %State{state | tombstones: tombstones}}
+    end
   end
 
 

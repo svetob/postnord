@@ -46,7 +46,9 @@ defmodule Postnord.Perftest do
     end)
   end
 
-  defp write(from, msg, 0), do: send from, :ok
+  defp write(from, _msg, 0) do
+    send from, :ok
+  end
   defp write(from, msg, remain) do
     case Postnord.Partition.write_message(Postnord.Partition, msg) do
       :ok -> write(from, msg, remain - 1)
@@ -85,14 +87,21 @@ defmodule Postnord.Perftest do
     end)
   end
 
-  defp read(from, 0), do: send from, :ok
+  defp read(from, 0) do
+    send from, :ok
+  end
   defp read(from, remain) do
     case Postnord.Consumer.Partition.read(Postnord.Consumer.Partition) do
-      {:ok, _} -> read(from, remain - 1)
-      :empty ->
-        #Logger.warn "Empty"
-        read(from, remain)
+      {:ok, id, _} -> accept(from, remain, id)
+      :empty -> read(from, remain)
       {:error, reason} -> raise {:error, reason}
+    end
+  end
+
+  defp accept(from, remain, id) do
+    case Postnord.Consumer.Partition.accept(Postnord.Consumer.Partition, id) do
+      :ok -> read(from, remain - 1)
+      :noop -> read(from, remain)
     end
   end
 

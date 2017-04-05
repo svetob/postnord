@@ -21,12 +21,14 @@ defmodule Postnord.Consumer.Partition.IndexLog do
         {:error, reason}
     end
   end
-  def ensure_open_indexlog({:ok, state} = ok), do: ok
-  def ensure_open_indexlog({:error, reason} = error), do: error
+  def ensure_open_indexlog({:ok, _state} = ok), do: ok
+  def ensure_open_indexlog({:error, _reason} = error), do: error
 
-  def next_index_entry({:ok, state}), do: scan_index_entries(state)
+  def next_index_entry({:ok, state}) do
+    scan_index_entries(state)
+  end
   def next_index_entry(:empty), do: :empty
-  def next_index_entry({:error, reason} = error), do: error
+  def next_index_entry({:error, _reason} = error), do: error
 
   # Scan index entries until one which is not tombstoned is found
   # TODO: This is a first dumb+wrong implementation, just to get started.
