@@ -3,8 +3,8 @@ defmodule Postnord.Test.Consumer.Partition do
 
   require Logger
   alias Postnord.IndexLog.Entry, as: Entry
-  alias Postnord.Consumer.Partition.State, as: State
-  alias Postnord.Consumer.Partition, as: PartitionConsumer
+  alias Postnord.Consumer.PartitionConsumer.State, as: State
+  alias Postnord.Consumer.PartitionConsumer
 
   @moduledoc """
   Unit tests for partition consumer.

@@ -5,7 +5,7 @@ defmodule Postnord.Partition do
   alias Postnord.MessageLog
   alias Postnord.IndexLog
   alias Postnord.IndexLog.Entry
-  alias Postnord.Consumer.Partition, as: PartitionConsumer
+  alias Postnord.Consumer.PartitionConsumer
 
   @moduledoc """
   Managing GenServer for a single message queue partition.
@@ -49,7 +49,7 @@ defmodule Postnord.Partition do
   end
 
   defp partition_reader_state(path) do
-    %Postnord.Consumer.Partition.State{path: path}
+    %PartitionConsumer.State{path: path}
   end
 
   @doc """

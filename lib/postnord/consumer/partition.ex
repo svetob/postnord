@@ -1,4 +1,4 @@
-defmodule Postnord.Consumer.Partition.State do
+defmodule Postnord.Consumer.PartitionConsumer.State do
   @moduledoc """
   State struct for partition reader.
   """
@@ -13,13 +13,13 @@ defmodule Postnord.Consumer.Partition.State do
             tombstones: MapSet.new()
 end
 
-defmodule Postnord.Consumer.Partition do
+defmodule Postnord.Consumer.PartitionConsumer do
   require Logger
-  import Postnord.Consumer.Partition.IndexLog
-  import Postnord.Consumer.Partition.MessageLog
+  import Postnord.Consumer.PartitionConsumer.IndexLog
+  import Postnord.Consumer.PartitionConsumer.MessageLog
   use GenServer
 
-  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.PartitionConsumer.State
   alias Postnord.TombstoneLog.Tombstone
 
   @moduledoc """
@@ -75,7 +75,7 @@ defmodule Postnord.Consumer.Partition do
 
   def handle_call({:accept, id}, _from, state) do
     tombstone = %Tombstone{id: id}
-    if (MapSet.member?(state.tombstones, tombstone)) do
+    if MapSet.member?(state.tombstones, tombstone) do
       {:reply, :noop, state}
     else
       tombstones = state.tombstones |> MapSet.put(tombstone)

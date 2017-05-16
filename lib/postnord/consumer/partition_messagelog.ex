@@ -1,7 +1,7 @@
-defmodule Postnord.Consumer.Partition.MessageLog do
+defmodule Postnord.Consumer.PartitionConsumer.MessageLog do
   require Logger
 
-  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.PartitionConsumer.State
 
   @moduledoc """
   Consumer functions for opening and reading from message log.

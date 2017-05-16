@@ -1,8 +1,8 @@
-defmodule Postnord.Consumer.Partition.IndexLog do
+defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
   require Logger
 
   alias Postnord.IndexLog.Entry
-  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.PartitionConsumer.State
   alias Postnord.TombstoneLog.Tombstone
 
   @moduledoc """
