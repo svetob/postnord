@@ -1,9 +1,11 @@
 defmodule Postnord.Partition do
   require Logger
   use GenServer
-  alias Postnord.MessageLog, as: MessageLog
-  alias Postnord.IndexLog, as: IndexLog
-  alias Postnord.Consumer.Partition, as: PartitionConsumer
+
+  alias Postnord.MessageLog
+  alias Postnord.IndexLog
+  alias Postnord.IndexLog.Entry
+  alias Postnord.Consumer.PartitionConsumer
 
   @moduledoc """
   Managing GenServer for a single message queue partition.
@@ -47,7 +49,7 @@ defmodule Postnord.Partition do
   end
 
   defp partition_reader_state(path) do
-    %Postnord.Consumer.Partition.State{path: path}
+    %PartitionConsumer.State{path: path}
   end
 
   @doc """
@@ -58,21 +60,18 @@ defmodule Postnord.Partition do
   end
 
   def handle_call({:write, bytes}, from, nil) do
-    Logger.debug "Got write call"
-    id = Postnord.now(:nanosecond) # TODO: ID Generator
-    MessageLog.write(Postnord.MessageLog, bytes, {from, id})
+    id = Postnord.IdGen.id()
+    MessageLog.write(MessageLog, bytes, {from, id})
     {:noreply, nil}
   end
 
   def handle_cast({:write_messagelog_ok, offset, len, {from, id}}, nil) do
-    Logger.debug "Got write_messagelog call"
-    entry = %Postnord.IndexLog.Entry{id: id, offset: offset, len: len}
-    IndexLog.write(Postnord.IndexLog, entry, {from})
+    entry = %Entry{id: id, offset: offset, len: len}
+    IndexLog.write(IndexLog, entry, {from})
     {:noreply, nil}
   end
 
   def handle_cast({:write_indexlog_ok, {from}}, nil) do
-    Logger.debug "Got write_indexlog call"
     GenServer.reply(from, :ok)
     {:noreply, nil}
   end

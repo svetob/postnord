@@ -1,7 +1,7 @@
-defmodule Postnord.Consumer.Partition.MessageLog do
+defmodule Postnord.Consumer.PartitionConsumer.MessageLog do
   require Logger
 
-  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.PartitionConsumer.State
 
   @moduledoc """
   Consumer functions for opening and reading from message log.
@@ -19,8 +19,8 @@ defmodule Postnord.Consumer.Partition.MessageLog do
         {:error, reason}
     end
   end
-  def ensure_open_messagelog({:ok, state} = ok), do: ok
-  def ensure_open_messagelog({:error, reason} = error), do: error
+  def ensure_open_messagelog({:ok, _state} = ok), do: ok
+  def ensure_open_messagelog({:error, _reason} = error), do: error
 
   def read_message({:ok, state, entry}) do
     len = entry.len
@@ -32,9 +32,9 @@ defmodule Postnord.Consumer.Partition.MessageLog do
       {:ok, bytes} when byte_size(bytes) != len ->
         Logger.warn("Message size #{byte_size bytes} did not match expected size #{len}, assuming message is not fully written to disk yet")
         :empty
-      {:ok, bytes}  -> {:ok, state, bytes}
+      {:ok, bytes}  -> {:ok, state, entry.id, bytes}
     end
   end
   def read_message(:empty), do: :empty
-  def read_message({:error, reason} = error), do: error
+  def read_message({:error, _reason} = error), do: error
 end

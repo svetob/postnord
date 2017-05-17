@@ -34,6 +34,10 @@ defmodule Postnord.Mixfile do
     [
       {:random_bytes, "~> 1.0"},
 
+      # HTTP REST API
+      {:cowboy, "~> 1.0"},
+      {:plug, "~> 1.1"},
+
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},
       {:dialyxir, "~> 0.4", only: :dev, runtime: false}

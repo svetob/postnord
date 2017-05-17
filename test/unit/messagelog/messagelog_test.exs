@@ -5,6 +5,13 @@ defmodule Postnord.Test.MessageLog do
   alias Postnord.MessageLog
   alias Postnord.MessageLog.State
 
+  @moduledoc """
+  Unit tests for message log.
+
+  The tests ask the message log to write messages to disk, verifies the
+  responses, the timing of disk writes, and the contents of the written files.
+  """
+
   @flush_timeout 10
   @buffer_size 1024
 
@@ -44,7 +51,7 @@ defmodule Postnord.Test.MessageLog do
 
     MessageLog.write(context[:pid], "foo", metadata)
 
-    assert_receive {:"$gen_cast", {:write_messagelog_ok, _, _, metadata}}
+    assert_receive {:"$gen_cast", {:write_messagelog_ok, _, _, ^metadata}}
   end
 
 
@@ -54,7 +61,7 @@ defmodule Postnord.Test.MessageLog do
 
     MessageLog.write(context[:pid], msg, nil)
 
-    assert_receive {:"$gen_cast", {:write_messagelog_ok, 0, len, _}}
+    assert_receive {:"$gen_cast", {:write_messagelog_ok, 0, ^len, _}}
   end
 
 
@@ -85,7 +92,7 @@ defmodule Postnord.Test.MessageLog do
     end)
 
     1..sample_size |> Enum.each(fn n ->
-      assert_receive {:ok, n}, 200
+      assert_receive {:ok, ^n}, 200
     end)
   end
 

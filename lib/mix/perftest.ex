@@ -1,4 +1,6 @@
 defmodule Postnord.Perftest do
+  alias Postnord.Partition
+  alias Postnord.Consumer.PartitionConsumer
   require Logger
 
   @moduledoc """
@@ -46,9 +48,11 @@ defmodule Postnord.Perftest do
     end)
   end
 
-  defp write(from, msg, 0), do: send from, :ok
+  defp write(from, _msg, 0) do
+    send from, :ok
+  end
   defp write(from, msg, remain) do
-    case Postnord.Partition.write_message(Postnord.Partition, msg) do
+    case Partition.write_message(Partition, msg) do
       :ok -> write(from, msg, remain - 1)
       {:error, reason} -> raise {:error, reason}
     end
@@ -85,14 +89,21 @@ defmodule Postnord.Perftest do
     end)
   end
 
-  defp read(from, 0), do: send from, :ok
+  defp read(from, 0) do
+    send from, :ok
+  end
   defp read(from, remain) do
-    case Postnord.Consumer.Partition.read(Postnord.Consumer.Partition) do
-      {:ok, _} -> read(from, remain - 1)
-      :empty ->
-        #Logger.warn "Empty"
-        read(from, remain)
+    case PartitionConsumer.read(PartitionConsumer) do
+      {:ok, id, _} -> accept(from, remain, id)
+      :empty -> read(from, remain)
       {:error, reason} -> raise {:error, reason}
+    end
+  end
+
+  defp accept(from, remain, id) do
+    case PartitionConsumer.accept(PartitionConsumer, id) do
+      :ok -> read(from, remain - 1)
+      :noop -> read(from, remain)
     end
   end
 

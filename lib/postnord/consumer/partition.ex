@@ -1,4 +1,4 @@
-defmodule Postnord.Consumer.Partition.State do
+defmodule Postnord.Consumer.PartitionConsumer.State do
   @moduledoc """
   State struct for partition reader.
   """
@@ -9,16 +9,18 @@ defmodule Postnord.Consumer.Partition.State do
             messagelog_iodevice: nil,
             indexlog_path: "",
             indexlog_iodevice: nil,
-            indexlog_bytes_read: 0
+            indexlog_bytes_read: 0,
+            tombstones: MapSet.new()
 end
 
-defmodule Postnord.Consumer.Partition do
+defmodule Postnord.Consumer.PartitionConsumer do
   require Logger
-  import Postnord.Consumer.Partition.IndexLog
-  import Postnord.Consumer.Partition.MessageLog
+  import Postnord.Consumer.PartitionConsumer.IndexLog
+  import Postnord.Consumer.PartitionConsumer.MessageLog
   use GenServer
 
-  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.PartitionConsumer.State
+  alias Postnord.TombstoneLog.Tombstone
 
   @moduledoc """
   This is a first pass at a consumer process to read from a partition.
@@ -46,8 +48,6 @@ defmodule Postnord.Consumer.Partition do
   - ACCEPT / REJECT / REQUEUE of messages
   """
 
-  @file_opts [:read, :raw, :binary]
-
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
   end
@@ -61,13 +61,28 @@ defmodule Postnord.Consumer.Partition do
     GenServer.call(pid, :read)
   end
 
-  def handle_call(:read, from, state) do
+  def accept(pid, id) do
+    GenServer.call(pid, {:accept, id})
+  end
+
+  def handle_call(:read, _from, state) do
     case state |> ensure_open |> next_index_entry |> read_message do
       :empty -> {:reply, :empty, state}
       {:error, reason} -> {:reply, {:error, reason}, state}
-      {:ok, state, bytes} -> {:reply, {:ok, bytes}, state}
+      {:ok, state, id, bytes} -> {:reply, {:ok, id, bytes}, state}
     end
   end
+
+  def handle_call({:accept, id}, _from, state) do
+    tombstone = %Tombstone{id: id}
+    if MapSet.member?(state.tombstones, tombstone) do
+      {:reply, :noop, state}
+    else
+      tombstones = state.tombstones |> MapSet.put(tombstone)
+      {:reply, :ok, %State{state | tombstones: tombstones}}
+    end
+  end
+
 
   defp ensure_open(state) do
     {:ok, state}

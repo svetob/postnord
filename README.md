@@ -13,6 +13,7 @@ When you want:
 - ease of maintenance
 - AP of CAP
 - linear scaleability outwards
+- at-least-once delivery guarantees
 
 When you don't need:
 

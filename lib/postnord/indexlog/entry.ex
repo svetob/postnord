@@ -1,5 +1,6 @@
 defmodule Postnord.IndexLog.Entry do
   require Logger
+  import Postnord.BinaryConvert
 
   @moduledoc """
   Index log entry definition.
@@ -8,29 +9,21 @@ defmodule Postnord.IndexLog.Entry do
   """
   # TODO: Improve storage format
 
-  defstruct id: 0, offset: 0, len: 0
+  defstruct id: <<>>,
+            offset: 0,
+            len: 0
 
-  @byte_size 24
+  @byte_size 32
   def byte_size, do: @byte_size
 
   def as_bytes(entry) do
-    to_binary(entry.id, 8) <> to_binary(entry.offset, 8) <> to_binary(entry.len, 8)
+    entry.id <> integer_to_binary(entry.offset, 8) <> integer_to_binary(entry.len, 8)
   end
 
   def from_bytes(bytes) do
     # TODO Assert bytes size
-    %Postnord.IndexLog.Entry{id:     from_binary(binary_part(bytes, 0, 8)),
-                             offset: from_binary(binary_part(bytes, 8, 8)),
-                             len:    from_binary(binary_part(bytes, 16, 8))}
-  end
-
-  defp to_binary(value, bytes) do
-    digits = Integer.digits(value, 256)
-    padded = List.duplicate(0, bytes - length(digits)) ++ digits
-    :erlang.iolist_to_binary(padded)
-  end
-
-  defp from_binary(value) do
-    Integer.undigits(:erlang.binary_to_list(value), 256)
+    %Postnord.IndexLog.Entry{id:     binary_part(bytes, 0, 16),
+                             offset: binary_to_integer(binary_part(bytes, 16, 8)),
+                             len:    binary_to_integer(binary_part(bytes, 24, 8))}
   end
 end

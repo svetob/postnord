@@ -3,8 +3,17 @@ defmodule Postnord.Test.Consumer.Partition do
 
   require Logger
   alias Postnord.IndexLog.Entry, as: Entry
-  alias Postnord.Consumer.Partition.State, as: State
-  alias Postnord.Consumer.Partition, as: PartitionConsumer
+  alias Postnord.Consumer.PartitionConsumer.State, as: State
+  alias Postnord.Consumer.PartitionConsumer
+
+  @moduledoc """
+  Unit tests for partition consumer.
+
+  The tests create readable partition files, performs serial read operations and
+  verifies the results.
+  """
+
+  # TODO: Rework tests later when proper tombstoning and requeueing is in effect.
 
   @path Application.get_env(:postnord, :test_data_path)
   @path_message_log Path.join(@path, "message.log")
@@ -32,16 +41,30 @@ defmodule Postnord.Test.Consumer.Partition do
     msgs = ["foo"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    {:ok, _id, "foo"} = PartitionConsumer.read(context[:pid])
+  end
+
+  test "Reads same value from file until accepted", context do
+    msgs = ["foo", "bar"]
+    write_data(msgs, entries_for(msgs))
+
+    {:ok, id_a, "foo"} = PartitionConsumer.read(context[:pid])
+    assert {:ok, id_a, "foo"} == PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id_a)
+    {:ok, id_b, "bar"} = PartitionConsumer.read(context[:pid])
+    assert {:ok, id_b, "bar"} == PartitionConsumer.read(context[:pid])
   end
 
   test "Reads values from file in order", context do
     msgs = ["foo", "bar", "cats"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
-    assert {:ok, "bar"} == PartitionConsumer.read(context[:pid])
-    assert {:ok, "cats"} == PartitionConsumer.read(context[:pid])
+    {:ok, id_a, "foo"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id_a)
+    {:ok, id_b, "bar"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id_b)
+    {:ok, id_c, "cats"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id_c)
   end
 
   test "Returns :empty if file is empty", context do
@@ -54,7 +77,8 @@ defmodule Postnord.Test.Consumer.Partition do
     msgs = ["foo"]
     write_data(msgs, entries_for(msgs))
 
-    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    {:ok, id, "foo"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id)
     assert :empty == PartitionConsumer.read(context[:pid])
     assert :empty == PartitionConsumer.read(context[:pid])
     assert :empty == PartitionConsumer.read(context[:pid])
@@ -63,9 +87,10 @@ defmodule Postnord.Test.Consumer.Partition do
   test "Returns :empty if data for entry not written yet", context do
     msgs = ["foo"]
     entries = entries_for ["foo", "bar"]
-    write_data(msgs, entries_for(msgs))
+    write_data(msgs, entries)
 
-    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    {:ok, id, "foo"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id)
     assert :empty == PartitionConsumer.read(context[:pid])
   end
 
@@ -74,7 +99,8 @@ defmodule Postnord.Test.Consumer.Partition do
     entries = entries_for(["foo"])
     write_data(msgs, entries)
 
-    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    {:ok, id, "foo"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id)
     assert :empty == PartitionConsumer.read(context[:pid])
   end
 
@@ -83,7 +109,8 @@ defmodule Postnord.Test.Consumer.Partition do
     entries = entries_for(["foo", "bar"])
     write_data(msgs, entries)
 
-    assert {:ok, "foo"} == PartitionConsumer.read(context[:pid])
+    {:ok, id, "foo"} = PartitionConsumer.read(context[:pid])
+    assert :ok == PartitionConsumer.accept(context[:pid], id)
     assert :empty == PartitionConsumer.read(context[:pid])
   end
 
@@ -104,11 +131,12 @@ defmodule Postnord.Test.Consumer.Partition do
 
   defp entries_for(messages) do
     Enum.reduce(messages, [], fn (m, acc) ->
+      id = Postnord.IdGen.id()
       case acc do
-        [] -> [%Entry{id: 0, offset: 0, len: byte_size m}]
+        [] -> [%Entry{id: id, offset: 0, len: byte_size m}]
         _ ->
           prev = List.last(acc)
-          acc ++ [%Entry{id: prev.id + 1,
+          acc ++ [%Entry{id: id,
                         offset: prev.offset + prev.len,
                         len: byte_size m}]
       end

@@ -1,8 +1,9 @@
-defmodule Postnord.Consumer.Partition.IndexLog do
+defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
   require Logger
 
   alias Postnord.IndexLog.Entry
-  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.PartitionConsumer.State
+  alias Postnord.TombstoneLog.Tombstone
 
   @moduledoc """
   Consumer functions for opening and reading from index log.
@@ -20,22 +21,39 @@ defmodule Postnord.Consumer.Partition.IndexLog do
         {:error, reason}
     end
   end
-  def ensure_open_indexlog({:ok, state} = ok), do: ok
-  def ensure_open_indexlog({:error, reason} = error), do: error
+  def ensure_open_indexlog({:ok, _state} = ok), do: ok
+  def ensure_open_indexlog({:error, _reason} = error), do: error
 
   def next_index_entry({:ok, state}) do
+    scan_index_entries(state)
+  end
+  def next_index_entry(:empty), do: :empty
+  def next_index_entry({:error, _reason} = error), do: error
+
+  # Scan index entries until one which is not tombstoned is found
+  # TODO: This is a first dumb+wrong implementation, just to get started.
+  #       It will resend a message until it is accepted, and not resend earlier
+  #       requeued entries.
+  #       We are supposed to instead keep scanned entries in memory and pick the
+  #       first non-tombstoned one.
+  defp scan_index_entries(state) do
     case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, Entry.byte_size) do
       :eof -> :empty
       {:error, reason} ->
         Logger.error("Failed to read index log entry: #{inspect reason}")
         {:error, reason}
       {:ok, bytes} ->
-        state = %State{state | indexlog_bytes_read: state.indexlog_bytes_read + Entry.byte_size}
         entry = Entry.from_bytes(bytes)
-        {:ok, state, entry}
+        if state.tombstones |> MapSet.member?(tombstone(entry)) do
+          # Message is tombstoned, proceed
+          state = %State{state | indexlog_bytes_read: state.indexlog_bytes_read + Entry.byte_size}
+          scan_index_entries(state)
+        else
+          # Message not tombstoned, read it
+          {:ok, state, entry}
+        end
     end
   end
-  def next_index_entry(:empty), do: :empty
-  def next_index_entry({:error, reason} = error), do: error
 
+  defp tombstone(entry), do: %Tombstone{id: entry.id}
 end

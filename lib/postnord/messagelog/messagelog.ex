@@ -39,22 +39,27 @@ defmodule Postnord.MessageLog do
   end
 
   def init(state) do
+    {:ok, state |> open_log()}
+  end
+
+  defp open_log(state) do
     # Create output directory
     :ok = state.path |> File.mkdir_p()
 
     # Open output file
     filepath = Path.join(state.path, @file_name)
-    file = File.open!(filepath, @file_opts)
+    iodevice = File.open!(filepath, @file_opts)
+    iostat = File.stat!(filepath)
     Logger.debug "Appending to: #{Path.absname(filepath)}"
 
-    {:ok, %State{state | iodevice: file}}
+    %State{state | iodevice: iodevice, offset: iostat.size}
   end
 
   @doc """
   Write a message to the log
   """
   def write(pid, bytes, metadata, callback \\ self()) do
-    GenServer.cast(pid, {:write, self(), bytes, metadata})
+    GenServer.cast(pid, {:write, callback, bytes, metadata})
   end
 
   def handle_cast({:write, from, bytes, metadata}, state) do
@@ -74,7 +79,7 @@ defmodule Postnord.MessageLog do
     {:noreply, flush(state)}
   end
 
-  def terminate(reason, state) do
+  def terminate(reason, _state) do
     Logger.debug "Message log terminating: #{inspect reason}"
   end
 
