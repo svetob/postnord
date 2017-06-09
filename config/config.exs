@@ -3,7 +3,9 @@
 use Mix.Config
 
 config :postnord,
-  data_path: "data/"
+  data_path: "data/",
+  port: 2010,
+  replica_nodes: []
 
 config :postnord, Postnord.IndexLog,
   buffer_size: (128 * 1024),

@@ -34,8 +34,6 @@ defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
   # TODO: This is a first dumb+wrong implementation, just to get started.
   #       It will resend a message until it is accepted, and not resend earlier
   #       requeued entries.
-  #       We are supposed to instead keep scanned entries in memory and pick the
-  #       first non-tombstoned one.
   defp scan_index_entries(state) do
     case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, Entry.byte_size) do
       :eof -> :empty

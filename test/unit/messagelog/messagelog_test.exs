@@ -13,6 +13,7 @@ defmodule Postnord.Test.MessageLog do
   """
 
   @flush_timeout 10
+  @flush_timeout_us @flush_timeout * 1000
   @buffer_size 1024
 
 
@@ -39,29 +40,16 @@ defmodule Postnord.Test.MessageLog do
   test "Writes message to file", context do
     msg = "Hello World!"
 
-    :ok = MessageLog.write(context[:pid], msg, nil)
+    {:ok, _, _} = MessageLog.write(context[:pid], msg)
 
-    assert_receive {:"$gen_cast", {:write_messagelog_ok, _, _, _}}
-    assert IO.read(context[:output_file], :all) == msg
-  end
-
-
-  test "Includes metadata in result", context do
-    metadata = {:foo, :bar}
-
-    MessageLog.write(context[:pid], "foo", metadata)
-
-    assert_receive {:"$gen_cast", {:write_messagelog_ok, _, _, ^metadata}}
+    assert log_content(context) == msg
   end
 
 
   test "Returns correct offset, len of writes", context do
-    msg = "Hello World!"
-    len = byte_size(msg)
-
-    MessageLog.write(context[:pid], msg, nil)
-
-    assert_receive {:"$gen_cast", {:write_messagelog_ok, 0, ^len, _}}
+    {:ok, 0, 12} = MessageLog.write(context[:pid], "Hello world!")
+    {:ok, 12, 10} = MessageLog.write(context[:pid], "Nice suit!")
+    {:ok, 22, 15} = MessageLog.write(context[:pid], "Why, thank you!")
   end
 
 
@@ -69,8 +57,7 @@ defmodule Postnord.Test.MessageLog do
     msgs = 1..5 |> Enum.map(fn _ -> RandomBytes.base16(10) end)
 
     msgs |> Enum.each(fn msg ->
-      MessageLog.write(context[:pid], msg, nil)
-      assert_receive {:"$gen_cast", {:write_messagelog_ok, _, _, _}}
+      {:ok, _, _} = MessageLog.write(context[:pid], msg)
     end)
 
     assert IO.read(context[:output_file], :all) == Enum.join(msgs)
@@ -82,47 +69,54 @@ defmodule Postnord.Test.MessageLog do
 
     1..sample_size |> Enum.each(fn n ->
       spawn_link fn ->
-        :ok = MessageLog.write(context[:pid], RandomBytes.base16(10), n)
-        receive do
-          {:"$gen_cast", {:write_messagelog_ok, _, _, n}} -> send me, {:ok, n}
-        after
-          100 -> send me, {:error, "Sample #{n} timed out"}
-        end
+        msg = RandomBytes.base16(n)
+        {:ok, _, _} = MessageLog.write(context[:pid], msg)
+        send me, {:ok, n}
       end
     end)
 
     1..sample_size |> Enum.each(fn n ->
-      assert_receive {:ok, ^n}, 200
+      assert_receive {:ok, ^n}, 2000
     end)
   end
 
 
   test "Buffers writes until flush_timeout", context do
-    :ok = MessageLog.write(context[:pid], "Foo", :waits)
+    me = self()
+    spawn_link fn ->
+      {:ok, _, _} = MessageLog.write(context[:pid], "Foo")
+      send me, :write_ok
+    end
 
-    refute_receive {:"$gen_cast", {:write_messagelog_ok, _, _, :waits}}, @flush_timeout
-    assert_receive {:"$gen_cast", {:write_messagelog_ok, _, _, :waits}}, 5
+    refute_receive :write_ok, @flush_timeout - 1
+    assert_receive :write_ok, 5
   end
 
 
   test "Buffers writes until buffer_size", context do
-    # Send small messages
-    :ok = MessageLog.write(context[:pid], "A", :A)
-    :ok = MessageLog.write(context[:pid], "B", :B)
-
-    # Ensure flush was not triggered
-    refute_received {:"$gen_cast", {:write_messagelog_ok, _, _, :A}}
-    refute_received {:"$gen_cast", {:write_messagelog_ok, _, _, :B}}
-
+    # Send small message
+    {time_a, _} = :timer.tc fn ->
+      {:ok, _, _} = MessageLog.write(context[:pid], "A")
+    end
+    # Send small message
+    {time_b, _} = :timer.tc fn ->
+      {:ok, _, _} = MessageLog.write(context[:pid], "B")
+    end
     # Send message of size buffer_size
-    msg_big = Enum.join(List.duplicate("C", @buffer_size))
-    :ok = MessageLog.write(context[:pid], msg_big, :big)
+    IO.puts "Big write"
+    msg_big = Enum.join(List.duplicate("X", @buffer_size))
+    {time_large, _} = :timer.tc fn ->
+      {:ok, _, _} = MessageLog.write(context[:pid], msg_big)
+    end
+    # Send small message
+    {time_c, _} = :timer.tc fn ->
+      {:ok, _, _} = MessageLog.write(context[:pid], "C")
+    end
 
-    # Buffer was flushed before flush_timeout
-    assert_receive  {:"$gen_cast", {:write_messagelog_ok, _, _, :A}}, @flush_timeout-1
-    assert_received {:"$gen_cast", {:write_messagelog_ok, _, _, :B}}
-    assert_received {:"$gen_cast", {:write_messagelog_ok, _, _, :big}}
-    assert log_content(context) == Enum.join ["A", "B", msg_big]
+    assert time_a >= @flush_timeout_us
+    assert time_b >= @flush_timeout_us
+    assert time_c >= @flush_timeout_us
+    assert time_large < @flush_timeout_us
   end
 
 

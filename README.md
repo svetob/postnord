@@ -18,8 +18,7 @@ When you want:
 When you don't need:
 
 - minimum latency
-- absolute maximum throughput per node
-- loads of features
+- order guarantees
 
 ## design goals
 

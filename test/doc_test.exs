@@ -6,5 +6,4 @@ defmodule Postnord.Doctest do
   """
 
   doctest Postnord.IdGen
-  doctest Postnord.Partition.Consumer.Marks
 end

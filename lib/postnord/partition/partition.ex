@@ -6,6 +6,7 @@ defmodule Postnord.Partition do
   alias Postnord.IndexLog
   alias Postnord.IndexLog.Entry
   alias Postnord.Consumer.PartitionConsumer
+  alias Postnord.RPC
 
   @moduledoc """
   Managing GenServer for a single message queue partition.
@@ -56,23 +57,48 @@ defmodule Postnord.Partition do
   Writes a single message to the partition.
   """
   def write_message(pid, bytes, timeout \\ 5_000) do
-    GenServer.call(pid, {:write, bytes}, timeout) # FIXME timeout is not triggering
+    try do
+      GenServer.call(pid, {:write, bytes}, timeout)
+    catch
+      :exit, reason ->
+        Logger.error "Write failed: #{inspect reason}"
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Replicates a single message to this partition on this node.
+  """
+  def replicate_message(pid, id, bytes, timeout \\ 5_000) do
+    try do
+      GenServer.call(pid, {:replicate, id, bytes}, timeout)
+    catch
+      :exit, reason ->
+        Logger.error "Replication failed: #{inspect reason}"
+        {:error, reason}
+    end
   end
 
   def handle_call({:write, bytes}, from, nil) do
     id = Postnord.IdGen.id()
-    MessageLog.write(MessageLog, bytes, {from, id})
+    spawn fn ->
+      replicate_nodes = RPC.replicate(id, bytes)
+      write_to_logs(id, bytes)
+      GenServer.reply(from, :ok)
+    end
     {:noreply, nil}
   end
 
-  def handle_cast({:write_messagelog_ok, offset, len, {from, id}}, nil) do
-    entry = %Entry{id: id, offset: offset, len: len}
-    IndexLog.write(IndexLog, entry, {from})
+  def handle_call({:replicate, id, bytes}, from, nil) do
+    spawn fn ->
+      write_to_logs(id, bytes)
+      GenServer.reply(from, :ok)
+    end
     {:noreply, nil}
   end
 
-  def handle_cast({:write_indexlog_ok, {from}}, nil) do
-    GenServer.reply(from, :ok)
-    {:noreply, nil}
+  defp write_to_logs(id, bytes) do
+    {:ok, offset, len} = MessageLog.write(MessageLog, bytes)
+    :ok = IndexLog.write(IndexLog, %Entry{id: id, offset: offset, len: len})
   end
 end

@@ -11,7 +11,7 @@ defmodule Postnord.Perftest do
   Launch Postnord application
   """
   def launch do
-    Postnord.start(nil, nil)
+    Postnord.main([])
   end
 
   @doc """

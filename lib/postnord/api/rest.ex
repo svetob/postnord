@@ -3,7 +3,6 @@ defmodule Postnord.Rest do
   alias Postnord.Partition
   use Plug.Router
   use Plug.Builder
-  require Logger
 
   @moduledoc """
   Schuppen REST API endpoints
@@ -22,6 +21,18 @@ defmodule Postnord.Rest do
 
   get "/message/" do
     response_get(conn, get_message())
+  end
+
+  post "/message/" do
+    {:ok, body, c} = Plug.Conn.read_body(conn)
+    resp = Partition.write_message(Partition, body)
+    response_post(c, resp)
+  end
+
+  post "/__replicate/:id" do
+    {:ok, body, c} = Plug.Conn.read_body(conn)
+    resp = Partition.replicate_message(Partition, id, body)
+    response_post(c, resp)
   end
 
   defp get_message do
@@ -57,14 +68,6 @@ defmodule Postnord.Rest do
     |> send_resp(500, reason)
     |> halt
   end
-
-  post "/message/" do
-    {:ok, body, c} = Plug.Conn.read_body(conn)
-    resp = Partition.write_message(Partition, body)
-    response_post(c, resp)
-  end
-
-
 
   defp response_post(conn, :ok) do
     conn

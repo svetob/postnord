@@ -27,7 +27,6 @@ defmodule Postnord.MessageLog do
   buffer :: data buffer to write
   callback :: callback processes to notify on write
 
-  TODO: Flush at regular intervals
   TODO: close(pid)
   """
 
@@ -58,12 +57,12 @@ defmodule Postnord.MessageLog do
   @doc """
   Write a message to the log
   """
-  def write(pid, bytes, metadata, callback \\ self()) do
-    GenServer.cast(pid, {:write, callback, bytes, metadata})
+  def write(pid, bytes, timeout \\ 5_000) do
+    GenServer.call(pid, {:write, bytes}, timeout)
   end
 
-  def handle_cast({:write, from, bytes, metadata}, state) do
-    state = buffer(state, from, bytes, metadata)
+  def handle_call({:write, bytes}, from, state) do
+    state = buffer(state, from, bytes)
 
     if byte_size(state.buffer) >= state.buffer_size do
       {:noreply, flush(state)}
@@ -86,11 +85,11 @@ defmodule Postnord.MessageLog do
   @doc """
   Buffer bytes for next write, add `from` process to callbacks list.
   """
-  defp buffer(state, from, bytes, metadata) do
+  defp buffer(state, from, bytes) do
     len = byte_size(bytes)
     %State{state | offset: state.offset + len,
                    buffer: state.buffer <> bytes,
-                   callbacks: [{from, state.offset, len, metadata} | state.callbacks]}
+                   callbacks: [{from, state.offset, len} | state.callbacks]}
   end
 
   @doc """
@@ -98,19 +97,22 @@ defmodule Postnord.MessageLog do
   """
   defp flush(state) do
     spawn fn ->
-      case :file.write(state.iodevice, state.buffer) do
-        :ok -> send_callbacks(state.callbacks)
-        {:error, reason} ->
-          # TODO Handle error when persisting
-          Logger.error("Failed writing to message log: #{inspect reason}")
-      end
+      state.iodevice
+      |> :file.write(state.buffer)
+      |> send_callbacks(state.callbacks)
     end
     %State{state | buffer: <<>>, callbacks: []}
   end
 
-  defp send_callbacks(callbacks) do
-    callbacks |> Enum.each(fn {from, offset, len, metadata} ->
-      GenServer.cast(from, {:write_messagelog_ok, offset, len, metadata})
+  defp send_callbacks(:ok, callbacks) do
+    callbacks |> Enum.each(fn {from, offset, len} ->
+      GenServer.reply(from, {:ok, offset, len})
+    end)
+  end
+  defp send_callbacks({:error, reason}, callbacks) do
+    Logger.error("Failed writing to message log: #{inspect reason}")
+    callbacks |> Enum.each(fn {from, _offset, _len} ->
+      GenServer.reply(from, {:error, reason})
     end)
   end
 end

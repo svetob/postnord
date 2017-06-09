@@ -49,13 +49,12 @@ defmodule Postnord.IndexLog do
   @doc """
   Write a message index to the log
   """
-  def write(pid, entry, metadata) do
-    GenServer.cast(pid, {:write, self(), entry, metadata})
+  def write(pid, entry) do
+    GenServer.call(pid, {:write, entry})
   end
 
-  def handle_cast({:write, from, entry, metadata}, state) do
-
-    state = buffer(state, from, entry, metadata)
+  def handle_call({:write, entry}, from, state) do
+    state = buffer(state, from, entry)
 
     if byte_size(state.buffer) >= state.buffer_size do
       {:noreply, flush(state)}
@@ -75,8 +74,8 @@ defmodule Postnord.IndexLog do
   Buffer incoming data for the next write, and add the `from` process to the
   callbacks list.
   """
-  defp buffer(state, from, entry, metadata) do
-    %State{state | callbacks: [{from, metadata} | state.callbacks],
+  defp buffer(state, from, entry) do
+    %State{state | callbacks: [from | state.callbacks],
                    buffer: state.buffer <> Entry.as_bytes(entry)}
   end
 
@@ -85,19 +84,22 @@ defmodule Postnord.IndexLog do
   """
   defp flush(state) do
     spawn fn ->
-      case IO.binwrite(state.iodevice, state.buffer) do
-        :ok -> send_callbacks(state.callbacks)
-        {:error, reason} ->
-          # TODO Handle error when persisting
-          Logger.error("Failed writing to index log: #{inspect reason}")
-      end
+      state.iodevice
+      |> IO.binwrite(state.buffer)
+      |> send_callbacks(state.callbacks)
     end
     %State{state | buffer: <<>>, callbacks: []}
   end
 
-  defp send_callbacks(callbacks) do
-    callbacks |> Enum.each(fn {from, metadata} ->
-      GenServer.cast(from, {:write_indexlog_ok, metadata})
+  defp send_callbacks(:ok, callbacks) do
+    callbacks |> Enum.each(fn from ->
+      GenServer.reply(from, :ok)
+    end)
+  end
+  defp send_callbacks({:error, reason}, callbacks) do
+    Logger.error("Failed writing to index log: #{inspect reason}")
+    callbacks |> Enum.each(fn from ->
+      GenServer.reply(from, {:error, reason})
     end)
   end
 end
