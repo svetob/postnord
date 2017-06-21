@@ -1,1 +1,3 @@
+Postnord.main([])
+
 ExUnit.start()

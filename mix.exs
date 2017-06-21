@@ -29,12 +29,19 @@ defmodule Postnord.Mixfile do
       {:random_bytes, "~> 1.0"},
       {:httpoison, "~> 0.11.1"},
 
+      # gRPC and Protobuf
+      {:grpc, github: "tony612/grpc-elixir"},
+
       # CLI
       {:commando, "~> 0.1"},
 
       # HTTP REST API
-      {:cowboy, "~> 1.0"},
+      {:cowboy, git: "https://github.com/tony612/cowboy.git", branch: "my-fix", override: true},
       {:plug, "~> 1.1"},
+
+      # Logging
+      {:lager_logger, "~> 1.0"},
+      {:lager, "3.5.1", override: true},
 
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},

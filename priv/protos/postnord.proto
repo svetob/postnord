@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package postnord;
+
+// Service definition for a Postnord node.
+service Node {
+  // ---- Public RPCs
+
+  // Write a message to a queue
+  rpc Write (WriteRequest) returns (WriteReply) {}
+
+  // Read a message from a queue
+  rpc Read (ReadRequest) returns (ReadReply) {}
+
+  // Confirm receival a message. Accept, Reject or Requeue
+  rpc Confirm (ConfirmRequest) returns (ConfirmReply) {}
+
+  // ---- Private RPCs
+
+  // Replicate a message
+  rpc Replicate (ReplicateRequest) returns (ReplicateReply) {}
+
+  // Acquire a consumer hold for the message
+  rpc AcquireHold (AcquireHoldRequest) returns (AcquireHoldReply) {}
+
+  // Tombstone a message
+  rpc Tombstone (TombstoneRequest) returns (TombstoneReply) {}
+}
+
+message WriteRequest {
+  string queue = 1;
+  bytes message = 2;
+}
+
+message WriteReply {
+  enum Response {
+    OK = 0;
+    ERROR = 1;
+    QUORUM_NOT_MET = 2;
+  }
+
+  Response response = 1;
+  string error_message = 2;
+}
+
+message ReadRequest {
+  string queue = 1;
+}
+
+message ReadReply {
+  enum Response {
+    OK = 0;
+    EMPTY = 1;
+    ERROR = 2;
+  }
+
+  Response response = 1;
+  string error_message = 2;
+  bytes id = 3;
+  bytes message = 4;
+}
+
+message ConfirmRequest {
+  enum Confirmation {
+    ACCEPT = 0;
+    REJECT = 1;
+    REQUEUE = 2;
+  }
+
+  string queue = 1;
+  bytes id = 2;
+  Confirmation confirmation = 3;
+}
+
+message ConfirmReply {
+  enum Response {
+    OK = 0;
+    ERROR = 1;
+    QUORUM_NOT_MET = 2;
+  }
+
+  Response response = 1;
+  string error_message = 2;
+}
+
+
+// Replicate request message containing message to replicate
+message ReplicateRequest {
+  string partition = 1;
+  string id = 2;
+  bytes message = 3;
+}
+
+// Replicate response message containing request status
+message ReplicateReply {
+  enum Response {
+    OK = 0;
+    ERROR = 1;
+  }
+
+  Response response = 1;
+  string error_message = 2;
+}
+
+// Replicate request message containing message to replicate
+message AcquireHoldRequest {
+  string partition = 1;
+  string id = 2;
+  string candidate = 3;
+}
+
+// Replicate response message containing request status
+message AcquireHoldReply {
+  enum Response {
+    HOLD_ACQUIRED = 0;
+    HOLD_DENIED = 1;
+    TOMBSTONED = 2;
+    ERROR = 3;
+  }
+  Response response = 1;
+  string error_message = 2;
+}
+
+// Replicate request message containing message to replicate
+message TombstoneRequest {
+  string partition = 1;
+  string id = 2;
+}
+
+// Replicate response message containing request status
+message TombstoneReply {
+  enum Response {
+    OK = 0;
+    ERROR = 1;
+  }
+  Response response = 1;
+  string error_message = 2;
+}
