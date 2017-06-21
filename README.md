@@ -1,6 +1,6 @@
-# postnord
+# postnord [![Build Status](https://travis-ci.org/svetob/postnord.svg?branch=master)](https://travis-ci.org/svetob/postnord)
 
-an eventually consistent message broker that joins __simplicity__ and __performance__
+postnord is an eventually consistent message broker.
 
 ## quick-start
 
@@ -45,3 +45,30 @@ $ mix postnord.perftest.mixed
 
 Tweak test settings to experiment with performance of e.g. small vs big
 messages, or few vs many writers. See `mix help postnord.perftest.mixed`
+
+## use cases
+
+When you want:
+
+- high throughput
+- guaranteed durability
+- fault tolerance
+- easy of use
+- ease of maintenance
+- AP
+- linear scaleability
+- at-least-once delivery guarantees
+
+When you don't need:
+
+- minimum latency
+- order guarantees
+
+## design goals
+
+- run excellently on most machines with default configuration
+- an intuitive, easy-to-use API
+- never lose data
+- abstract internals away from user
+- stable and reliable at any scale
+- prefer simplicity over features
