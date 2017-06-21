@@ -18,7 +18,7 @@ defmodule Mix.Tasks.Postnord.Perftest.WriteRead do
     * `-m`, `--msgbytes` - message size in bytes (default: 102400)
     * `-e`, `--entries` - number of entries to write (default: 10000)
     * `-w`, `--writers` - number of concurrent writer processes (default: 100)
-    * `-r`, `--readers` - number of concurrent reader processes (default: 100)
+    * `-r`, `--readers` - number of concurrent reader processes (default: 1)
   """
 
   def run(args) do
@@ -31,10 +31,10 @@ defmodule Mix.Tasks.Postnord.Perftest.WriteRead do
     write_test(
         opts[:msgbytes] || 100 * 1024,
         opts[:writers] || 100,
-        opts[:entries] || 100)
+        opts[:entries] || 10000)
 
     read_test(
-        opts[:readers] || 100,
-        opts[:entries] || 100)
+        opts[:readers] || 1,
+        opts[:entries] || 10000)
   end
 end

@@ -16,18 +16,19 @@ defmodule Mix.Tasks.Postnord.Perftest.Read do
   ## Command line options
 
     * `-e`, `--entries` - number of entries to write (default: 100)
-    * `-r`, `--readers` - number of concurrent reader processes (default: 10)
+    * `-r`, `--readers` - number of concurrent reader processes (default: 1)
   """
 
   def run(args) do
     {opts, _, _} = OptionParser.parse args,
-        switches: [msgbytes: :integer, writers: :integer, entries: :integer, readers: :integer],
-        aliases: [m: :msgbytes, w: :writers, e: :entries, r: :readers]
+        switches: [entries: :integer, readers: :integer],
+        aliases: [e: :entries, r: :readers]
 
     launch()
 
-    read_test(
-        opts[:readers] || 100,
-        opts[:entries] || 10)
+    readers = opts[:readers] || 1
+    entries = opts[:entries] || 100
+
+    read_test(readers, entries)
   end
 end

@@ -30,6 +30,6 @@ defmodule Mix.Tasks.Postnord.Perftest.Write do
     write_test(
         opts[:msgbytes] || 100 * 1024,
         opts[:writers] || 100,
-        opts[:entries] || 100)
+        opts[:entries] || 10000)
   end
 end
