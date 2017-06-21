@@ -16,21 +16,21 @@ defmodule Postnord.Test.MessageLog do
   @flush_timeout_us @flush_timeout * 1000
   @buffer_size 1024
 
+  @path :postnord |> Application.get_env(:data_path) |> Path.join("unit")
+  @path_message_log @path |> Path.join("message.log")
 
   setup do
-    path = Application.get_env(:postnord, :test_data_path)
-    file_path = Path.join(path, "message.log")
-    state = %State{path: path,
+    state = %State{path: @path,
                    flush_timeout: @flush_timeout,
                    buffer_size: @buffer_size}
 
     {:ok, message_log} = MessageLog.start_link(state)
-    {:ok, file} = File.open(file_path, [:binary, :read])
+    {:ok, file} = File.open(@path_message_log, [:binary, :read])
 
     on_exit fn ->
       # Remove output files after each test
-      File.rm(file_path)
-      File.rmdir(path)
+      File.rm(@path_message_log)
+      File.rmdir(@path)
     end
 
     [pid: message_log, output_file: file]
@@ -103,7 +103,6 @@ defmodule Postnord.Test.MessageLog do
       {:ok, _, _} = MessageLog.write(context[:pid], "B")
     end
     # Send message of size buffer_size
-    IO.puts "Big write"
     msg_big = Enum.join(List.duplicate("X", @buffer_size))
     {time_large, _} = :timer.tc fn ->
       {:ok, _, _} = MessageLog.write(context[:pid], msg_big)

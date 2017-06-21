@@ -6,6 +6,7 @@
 
 # Ignore test-data directories
 /data*
+/test/data
 
 # The directory Mix downloads your dependencies sources to.
 /deps

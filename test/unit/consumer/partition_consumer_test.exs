@@ -15,17 +15,15 @@ defmodule Postnord.Test.Consumer.Partition do
 
   # TODO: Rework tests later when proper tombstoning and requeueing is in effect.
 
-  @path Application.get_env(:postnord, :test_data_path)
-  @path_message_log Path.join(@path, "message.log")
-  @path_index_log Path.join(@path, "index.log")
+  @path :postnord |> Application.get_env(:data_path) |> Path.join("unit")
+  @path_message_log @path |> Path.join("message.log")
+  @path_index_log @path |> Path.join("index.log")
 
   setup do
     {:ok, pid} = PartitionConsumer.start_link(%State{path: @path})
 
     # Create output directory
-    :ok = @path
-    |> Path.dirname()
-    |> File.mkdir_p()
+    :ok = File.mkdir_p(@path <> "/")
 
     on_exit fn ->
       # Remove output files after each test
