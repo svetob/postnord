@@ -1,6 +1,13 @@
 defmodule Postnord.RPC do
   require Logger
 
+  @moduledoc """
+  Remote Procedure Calls that can be triggered by the current node.
+  """
+
+  @doc """
+  Send replication request.
+  """
   def replicate(id, bytes, caller \\ self()) do
     hosts = replica_nodes()
     hosts |> Enum.each(fn host ->
@@ -12,6 +19,9 @@ defmodule Postnord.RPC do
     hosts
   end
 
+  @doc """
+  Await replication replies from queried hosts.
+  """
   def replicate_await(hosts, timeout \\ 5_000) do
     replicate_await(hosts, cluster_quorum(), Enum.count(hosts), timeout)
   end

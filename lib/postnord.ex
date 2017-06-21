@@ -46,20 +46,22 @@ defmodule Postnord do
   Create CLI options parser with all configurable options and their descriptions.
   """
   def commando do
-    Commando.create("postnord", "an eventually consistent message broker", "mix run -p 2010")
+    cli = Commando.create("postnord", "an eventually consistent message broker", "mix run -p 2010")
+
+    cli
     |> Commando.with_help()
     |> Commando.with_switch(:port, :integer, "HTTP server port", alias: :p,
-                             default: Application.get_env(:postnord, :port))
+                            default: Application.get_env(:postnord, :port))
     |> Commando.with_switch(:grpc_port, :integer, "GRPC server port", alias: :gp,
                             default: Application.get_env(:postnord, :grpc_port))
     |> Commando.with_switch(:disable_http_server, :boolean, "Do not start the HTTP server")
     |> Commando.with_switch(:disable_grpc_server, :boolean, "Do not start the gRPC server")
     |> Commando.with_switch(:data_path, :string, "Data path", alias: :d,
-                             default: Application.get_env(:postnord, :data_path))
+                            default: Application.get_env(:postnord, :data_path))
     |> Commando.with_switch(:replica_nodes, :string, "Semicolon-separated list of replica node URLs", alias: :r,
-                             default: :postnord |> Application.get_env(:replica_nodes) |> Enum.join(";"))
+                            default: :postnord |> Application.get_env(:replica_nodes) |> Enum.join(";"))
     |> Commando.with_switch(:data_path, :string, "Data path", alias: :d,
-                             default: Application.get_env(:postnord, :data_path))
+                            default: Application.get_env(:postnord, :data_path))
   end
 
   def parse_input(args) do
