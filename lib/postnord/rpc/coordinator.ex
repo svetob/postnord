@@ -29,14 +29,14 @@ defmodule Postnord.RPC.Coordinator do
 
   defp rpc_sender({host_id, _host_path}, my_id) when host_id == my_id do
     name = rpc_sender_name("local")
-    module = Postnord.RPC.Sender.Local
+    module = Postnord.RPC.Client.Local
     {name, module, nil}
   end
 
   defp rpc_sender({host_id, host_path}, my_id) when host_id != my_id do
     name = rpc_sender_name(host_id)
-    module = Postnord.RPC.Sender.GRPC
-    child = worker(Postnord.RPC.Sender.GRPC, [host_path, [name: name]])
+    module = Postnord.RPC.Client.GRPC
+    child = worker(Postnord.RPC.Client.GRPC, [host_path, [name: name]])
     {module, name, child}
   end
 

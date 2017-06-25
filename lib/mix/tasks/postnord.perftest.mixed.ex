@@ -34,14 +34,14 @@ defmodule Mix.Tasks.Postnord.Perftest.Mixed do
       write_test(
           opts[:msgbytes] || 100 * 1024,
           opts[:writers] || 100,
-          opts[:entries] || 10000)
+          opts[:entries] || 10_000)
       send me, :ok_write
     end
 
     spawn_link fn ->
       read_test(
           opts[:readers] || 1,
-          opts[:entries] || 10000)
+          opts[:entries] || 10_000)
       send me, :ok_read
     end
 

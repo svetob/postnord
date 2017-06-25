@@ -1,5 +1,5 @@
-defmodule Postnord.RPC.Sender.GRPC do
-  @behaviour Postnord.RPC.Sender
+defmodule Postnord.RPC.Client.GRPC do
+  @behaviour Postnord.RPC.Client
 
   alias Postnord.GRPC.ReplicateRequest
   alias Postnord.GRPC.ReplicateReply

@@ -31,10 +31,10 @@ defmodule Mix.Tasks.Postnord.Perftest.WriteRead do
     write_test(
         opts[:msgbytes] || 100 * 1024,
         opts[:writers] || 100,
-        opts[:entries] || 10000)
+        opts[:entries] || 10_000)
 
     read_test(
         opts[:readers] || 1,
-        opts[:entries] || 10000)
+        opts[:entries] || 10_000)
   end
 end

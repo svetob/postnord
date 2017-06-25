@@ -1,5 +1,5 @@
-defmodule Postnord.RPC.Sender.Local do
-  @behaviour Postnord.RPC.Sender
+defmodule Postnord.RPC.Client.Local do
+  @behaviour Postnord.RPC.Client
 
   alias Postnord.Partition
   alias Postnord.Consumer.PartitionConsumer
