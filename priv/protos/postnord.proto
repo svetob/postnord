@@ -5,6 +5,7 @@ package postnord;
 // Service definition for a Postnord node.
 service Node {
   // ---- Public RPCs
+  // These RPC's are called by clients to interact with Postnord.
 
   // Write a message to a queue
   rpc Write (WriteRequest) returns (WriteReply) {}
@@ -16,6 +17,7 @@ service Node {
   rpc Confirm (ConfirmRequest) returns (ConfirmReply) {}
 
   // ---- Private RPCs
+  // These RPC's are cluster operations called by Postnord nodes.
 
   // Replicate a message
   rpc Replicate (ReplicateRequest) returns (ReplicateReply) {}
@@ -36,7 +38,8 @@ message WriteReply {
   enum Response {
     OK = 0;
     ERROR = 1;
-    QUORUM_NOT_MET = 2;
+    ERROR_NO_QUORUM = 2;
+    ERROR_DISK_WATERMARK = 3;
   }
 
   Response response = 1;
@@ -52,6 +55,7 @@ message ReadReply {
     OK = 0;
     EMPTY = 1;
     ERROR = 2;
+    ERROR_NO_QUORUM = 3;
   }
 
   Response response = 1;
@@ -76,7 +80,7 @@ message ConfirmReply {
   enum Response {
     OK = 0;
     ERROR = 1;
-    QUORUM_NOT_MET = 2;
+    ERROR_NO_QUORUM = 2;
   }
 
   Response response = 1;
@@ -93,12 +97,7 @@ message ReplicateRequest {
 
 // Replicate response message containing request status
 message ReplicateReply {
-  enum Response {
-    OK = 0;
-    ERROR = 1;
-  }
-
-  Response response = 1;
+  bool success = 1;
   string error_message = 2;
 }
 
@@ -129,10 +128,6 @@ message TombstoneRequest {
 
 // Replicate response message containing request status
 message TombstoneReply {
-  enum Response {
-    OK = 0;
-    ERROR = 1;
-  }
-  Response response = 1;
+  bool success = 1;
   string error_message = 2;
 }

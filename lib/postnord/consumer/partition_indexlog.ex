@@ -14,7 +14,7 @@ defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
   def ensure_open_indexlog({:ok, %State{indexlog_iodevice: nil} = state})  do
     case File.open(state.indexlog_path, @file_opts)  do
       {:ok, iodevice} ->
-        Logger.debug "Reading: #{Path.absname(state.indexlog_path)}"
+        Logger.info "Reading: #{Path.absname(state.indexlog_path)}"
         {:ok, %State{state | indexlog_iodevice: iodevice}}
       {:error, reason} ->
         Logger.error("Failed to open #{Path.absname(state.indexlog_path)}: #{inspect reason}")

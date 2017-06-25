@@ -1,6 +1,7 @@
 defmodule Postnord.Rest do
   alias Postnord.Consumer.PartitionConsumer
   alias Postnord.Partition
+  alias Postnord.RPC.Coordinator
   use Plug.Router
   use Plug.Builder
 
@@ -19,19 +20,13 @@ defmodule Postnord.Rest do
     |> halt
   end
 
-  get "/message/" do
+  get "/queue/:queue/message/" do
     response_get(conn, get_message())
   end
 
-  post "/message/" do
+  post "/queue/:queue/message/" do
     {:ok, body, c} = Plug.Conn.read_body(conn)
-    resp = Partition.write_message(Partition, body)
-    response_post(c, resp)
-  end
-
-  post "/__replicate/:id" do
-    {:ok, body, c} = Plug.Conn.read_body(conn)
-    resp = Partition.replicate_message(Partition, id, body)
+    resp = Coordinator.write_message(Partition, nil, body)
     response_post(c, resp)
   end
 
@@ -46,6 +41,7 @@ defmodule Postnord.Rest do
       other -> other
     end
   end
+  
   defp accept(id) do
     PartitionConsumer.accept(PartitionConsumer, id) == :ok
   end

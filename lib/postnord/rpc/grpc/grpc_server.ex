@@ -4,8 +4,10 @@ defmodule Postnord.GRPC.Node.Server do
   alias Postnord.GRPC.ConfirmReply
   alias Postnord.GRPC.ReadReply
   alias Postnord.GRPC.ReplicateReply
+  alias Postnord.GRPC.TombstoneReply
   alias Postnord.GRPC.WriteReply
   alias Postnord.Partition
+  alias Postnord.RPC.Coordinator
   require Logger
   use GRPC.Server, service: Postnord.GRPC.Node.Service
 
@@ -16,8 +18,7 @@ defmodule Postnord.GRPC.Node.Server do
   """
 
   def write(write_request, _stream) do
-    Logger.info "Writing #{write_request.message}"
-    case Partition.write_message(Partition, write_request.message) do
+    case Coordinator.write_message(write_request.queue, write_request.message) do
       :ok ->
         WriteReply.new(response: :OK)
       {:error, reason} ->
@@ -25,8 +26,8 @@ defmodule Postnord.GRPC.Node.Server do
     end
   end
 
-  def read(_read_request, _stream) do
-    case PartitionConsumer.read(PartitionConsumer) do
+  def read(read_request, _stream) do
+    case Coordinator.read_message(read_request.queue) do
       {:ok, id, message} ->
         ReadReply.new(response: :OK, id: id, message: message)
       :empty ->
@@ -38,6 +39,15 @@ defmodule Postnord.GRPC.Node.Server do
 
   def confirm(confirm_request, _stream) do
     handle_confirm(confirm_request)
+  end
+
+  defp handle_confirm(%ConfirmRequest{confirmation: :ACCEPT, id: id}) do
+    case PartitionConsumer.accept(PartitionConsumer, id) do
+      res when res in [:ok, :noop]  ->
+        ConfirmReply.new(response: :OK)
+      {:error, reason} ->
+        ConfirmReply.new(response: :ERROR, error_message: error_message(reason))
+    end
   end
 
   def replicate(replicate_request, _stream) do
@@ -53,17 +63,11 @@ defmodule Postnord.GRPC.Node.Server do
   end
 
   def tombstone(tombstone_request, _stream) do
-  end
-
-
-  defp handle_confirm(%ConfirmRequest{confirmation: :ACCEPT, id: id}) do
-    case PartitionConsumer.accept(PartitionConsumer, id) do
-      res when res in [:ok, :noop]  ->
-        ConfirmReply.new(response: :OK)
-      {:error, reason} ->
-        ConfirmReply.new(response: :ERROR, error_message: error_message(reason))
+    case PartitionConsumer.accept(PartitionConsumer, tombstone_request.id) do
+      res when res in [:ok, :noop] -> TombstoneReply.new(success: true)
     end
   end
+
 
   defp error_message(reason) when is_binary(reason) or is_bitstring(reason) do
     reason

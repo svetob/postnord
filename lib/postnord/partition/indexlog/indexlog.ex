@@ -70,18 +70,14 @@ defmodule Postnord.IndexLog do
     {:noreply, flush(state)}
   end
 
-  @doc """
-  Buffer incoming data for the next write, and add the `from` process to the
-  callbacks list.
-  """
+  # Buffer incoming data for the next write, and add the `from` process to the
+  # callbacks list.
   defp buffer(state, from, entry) do
     %State{state | callbacks: [from | state.callbacks],
                    buffer: state.buffer <> Entry.as_bytes(entry)}
   end
 
-  @doc """
-  Persist the write buffer to disk and notify all in callbacks list.
-  """
+  # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
     spawn fn ->
       state.iodevice

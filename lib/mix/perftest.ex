@@ -1,6 +1,6 @@
 defmodule Postnord.Perftest do
-  alias Postnord.Partition
   alias Postnord.Consumer.PartitionConsumer
+  alias Postnord.RPC.Coordinator
   require Logger
 
   @moduledoc """
@@ -52,7 +52,7 @@ defmodule Postnord.Perftest do
     send from, :ok
   end
   defp write(from, msg, remain) do
-    case Partition.write_message(Partition, msg) do
+    case Coordinator.write_message(nil, msg) do
       :ok -> write(from, msg, remain - 1)
       {:error, reason} -> raise {:error, reason}
     end
@@ -93,7 +93,7 @@ defmodule Postnord.Perftest do
     send from, :ok
   end
   defp read(from, remain) do
-    case PartitionConsumer.read(PartitionConsumer) do
+    case Coordinator.read_message(nil) do
       {:ok, id, _} -> accept(from, remain, id)
       :empty -> read(from, remain)
       {:error, reason} -> raise {:error, reason}
@@ -101,7 +101,7 @@ defmodule Postnord.Perftest do
   end
 
   defp accept(from, remain, id) do
-    case PartitionConsumer.accept(PartitionConsumer, id) do
+    case Coordinator.confirm_accept(nil, id) do
       :ok -> read(from, remain - 1)
       :noop -> read(from, remain)
     end

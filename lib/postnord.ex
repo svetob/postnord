@@ -9,7 +9,14 @@ defmodule Postnord do
   def main(args \\ []) do
     :ok = parse_input(args)
 
-    children = worker_postnord() ++ worker_http_server() ++ worker_grpc_server()
+    my_id = RandomBytes.uuid()
+    Postnord.Cluster.State.start_link(my_id)
+
+    # Start and supervise application processes
+    children = worker_postnord() ++
+               worker_coordinator() ++
+               worker_http_server() ++
+               worker_grpc_server()
 
     Supervisor.start_link(children, [
       strategy: :one_for_one,
@@ -20,6 +27,10 @@ defmodule Postnord do
   defp worker_postnord do
     data_path = Application.get_env(:postnord, :data_path)
     [worker(Postnord.Partition, [data_path, [name: Postnord.Partition]])]
+  end
+
+  defp worker_coordinator do
+    [worker(Postnord.RPC.Coordinator, [[], [name: Postnord.RPC.Coordinator]])]
   end
 
   defp worker_http_server do

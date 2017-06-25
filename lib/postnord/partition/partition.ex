@@ -6,7 +6,6 @@ defmodule Postnord.Partition do
   alias Postnord.IndexLog
   alias Postnord.IndexLog.Entry
   alias Postnord.Consumer.PartitionConsumer
-  alias Postnord.RPC
 
   @moduledoc """
   Managing GenServer for a single message queue partition.
@@ -54,20 +53,7 @@ defmodule Postnord.Partition do
   end
 
   @doc """
-  Writes a single message to the partition.
-  """
-  def write_message(pid, bytes, timeout \\ 5_000) do
-    try do
-      GenServer.call(pid, {:write, bytes}, timeout)
-    catch
-      :exit, reason ->
-        Logger.error "Write failed: #{inspect reason}"
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  Replicates a single message to this partition on this node.
+  Replicate a single message to this partition on this node.
   """
   def replicate_message(pid, id, bytes, timeout \\ 5_000) do
     try do
@@ -77,16 +63,6 @@ defmodule Postnord.Partition do
         Logger.error "Replication failed: #{inspect reason}"
         {:error, reason}
     end
-  end
-
-  def handle_call({:write, bytes}, from, nil) do
-    id = Postnord.IdGen.id()
-    spawn fn ->
-      replicate_nodes = RPC.replicate(id, bytes)
-      write_to_logs(id, bytes)
-      GenServer.reply(from, :ok)
-    end
-    {:noreply, nil}
   end
 
   def handle_call({:replicate, id, bytes}, from, nil) do

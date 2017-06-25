@@ -27,6 +27,6 @@ config :grpc,
 config :lager, :error_logger_redirect, false
 config :lager, :error_logger_whitelist, [Logger.ErrorHandler]
 config :lager, :crash_log, false
-config :lager, :handlers, [{LagerLogger, [level: :debug]}]
+config :lager, :handlers, [{LagerLogger, [level: :warn]}]
 
 import_config "#{Mix.env}.exs"

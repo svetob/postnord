@@ -1,6 +1,4 @@
 defmodule Postnord.TombstoneLog.Tombstone do
-  import Postnord.BinaryConvert
-
   @moduledoc """
   Tombstone definition.
   """

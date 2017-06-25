@@ -64,18 +64,14 @@ defmodule Postnord.TombstoneLog do
     {:noreply, flush(state)}
   end
 
-  @doc """
-  Buffer incoming data for the next write, and add the `from` process to the
-  callbacks list.
-  """
+  # Buffer incoming data for the next write, and add the `from` process to the
+  # callbacks list.
   defp buffer(state, from, tombstone, metadata) do
     %State{state | callbacks: [{from, metadata} | state.callbacks],
                    buffer: state.buffer <> Tombstone.as_bytes(tombstone)}
   end
 
-  @doc """
-  Persist the write buffer to disk and notify all in callbacks list.
-  """
+  # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
     spawn fn ->
       case IO.binwrite(state.iodevice, state.buffer) do

@@ -57,12 +57,12 @@ defmodule Postnord.Consumer.PartitionConsumer do
                          indexlog_path: Path.join(state.path, "index.log")}}
   end
 
-  def read(pid) do
-    GenServer.call(pid, :read)
+  def read(pid, timeout \\ 5_000) do
+    GenServer.call(pid, :read, timeout)
   end
 
-  def accept(pid, id) do
-    GenServer.call(pid, {:accept, id})
+  def accept(pid, id, timeout \\ 5_000) do
+    GenServer.call(pid, {:accept, id}, timeout)
   end
 
   def handle_call(:read, _from, state) do

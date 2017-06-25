@@ -82,9 +82,7 @@ defmodule Postnord.MessageLog do
     Logger.debug "Message log terminating: #{inspect reason}"
   end
 
-  @doc """
-  Buffer bytes for next write, add `from` process to callbacks list.
-  """
+  # Buffer bytes for next write, add `from` process to callbacks list.
   defp buffer(state, from, bytes) do
     len = byte_size(bytes)
     %State{state | offset: state.offset + len,
@@ -92,9 +90,7 @@ defmodule Postnord.MessageLog do
                    callbacks: [{from, state.offset, len} | state.callbacks]}
   end
 
-  @doc """
-  Persist write buffer to disk, notify all in callbacks list.
-  """
+  # Persist write buffer to disk, notify all in callbacks list.
   defp flush(state) do
     spawn fn ->
       state.iodevice
