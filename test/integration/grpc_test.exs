@@ -1,4 +1,4 @@
-defmodule Postnord.Test.EndToEnd do
+defmodule Postnord.Test.Integration.GRPC do
   use ExUnit.Case, async: false
 
   test "can connect to gRPC server" do

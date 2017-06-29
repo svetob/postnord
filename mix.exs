@@ -4,7 +4,7 @@ defmodule Postnord.Mixfile do
   def project do
     [app: :postnord,
      version: "0.1.0",
-     elixir: "~> 1.4",
+     elixir: "~> 1.4.5",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps()]
@@ -47,7 +47,10 @@ defmodule Postnord.Mixfile do
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},
       {:dialyxir, "~> 0.4", only: :dev, runtime: false},
-      {:remix, "~> 0.0.1", only: :dev} # Automatic hot code reload when saving file
+      {:remix, "~> 0.0.1", only: :dev}, # Automatic hot code reload when saving file
+
+      # Test utils
+      {:httpotion, "~> 3.0.2"}
     ]
   end
 end
