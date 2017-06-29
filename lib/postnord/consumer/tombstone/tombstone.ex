@@ -14,6 +14,6 @@ defmodule Postnord.TombstoneLog.Tombstone do
 
   def from_bytes(bytes) do
     # TODO Assert bytes size
-    %Postnord.TombstoneLog.Tombstone{id: bytes}
+    %__MODULE__{id: bytes}
   end
 end

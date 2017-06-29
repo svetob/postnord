@@ -1,6 +1,6 @@
 # postnord [![Build Status](https://travis-ci.org/svetob/postnord.svg?branch=master)](https://travis-ci.org/svetob/postnord)
 
-postnord is an eventually consistent message broker.
+An eventually consistent message broker, written in Elixir.
 
 ## quick-start
 

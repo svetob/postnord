@@ -75,7 +75,7 @@ defmodule Postnord.Consumer.PartitionConsumer do
 
   def handle_call({:accept, id}, _from, state) do
     tombstone = %Tombstone{id: id}
-    if MapSet.member?(state.tombstones, tombstone) do
+    if tombstoned?(state, tombstone) do
       {:reply, :noop, state}
     else
       tombstones = state.tombstones |> MapSet.put(tombstone)
@@ -83,6 +83,9 @@ defmodule Postnord.Consumer.PartitionConsumer do
     end
   end
 
+  defp tombstoned?(%State{tombstones: tombstones}, tombstone) do
+    MapSet.member?(tombstones, tombstone)
+  end
 
   defp ensure_open(state) do
     {:ok, state}

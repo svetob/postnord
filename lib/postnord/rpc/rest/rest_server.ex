@@ -1,80 +1,25 @@
-defmodule Postnord.Rest do
-  alias Postnord.Consumer.PartitionConsumer
-  alias Postnord.Partition
-  alias Postnord.RPC.Coordinator
-  use Plug.Router
-  use Plug.Builder
-
+defmodule Postnord.Rest.Server do
   @moduledoc """
-  Schuppen REST API endpoints
+  Launches the Cowboy REST server.
+
+  NOTE: Because gRPC uses Cowboy 2.0 for HTTP/2 support, and Plug is only
+  compatible with 1.x, we must build our REST server using the Cowboy API
+  directly as opposed to the preferred method of using Plug.Router/Builder.
   """
 
-  plug Plug.Logger
-  plug :match
-  plug :dispatch
-
-  get "/" do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(200, "Hello!")
-    |> halt
+  def start_link(port) do
+   	:cowboy.start_clear(:http, 100, [{:port, port}], %{
+   		env: %{dispatch: dispatch()}
+   	})
   end
 
-  get "/queue/:queue/message/" do
-    response_get(conn, get_message())
+  def dispatch do
+    :cowboy_router.compile([
+      {:_, [
+        {"/[_status]", Postnord.Rest.Route.Status, []},
+        {"/queue/:queue/message", Postnord.Rest.Route.Message, []}
+      ]}
+    ])
   end
 
-  post "/queue/:queue/message/" do
-    {:ok, body, c} = Plug.Conn.read_body(conn)
-    resp = Coordinator.write_message(Partition, nil, body)
-    response_post(c, resp)
-  end
-
-  defp get_message do
-    case PartitionConsumer.read(PartitionConsumer) do
-      {:ok, id, message} ->
-        if accept(id) do
-          {:ok, message}
-        else
-          get_message()
-        end
-      other -> other
-    end
-  end
-  
-  defp accept(id) do
-    PartitionConsumer.accept(PartitionConsumer, id) == :ok
-  end
-
-  defp response_get(conn, {:ok, message}) do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(200, message)
-    |> halt
-  end
-  defp response_get(conn, :empty) do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(204, "No message available")
-    |> halt
-  end
-  defp response_get(conn, {:error, reason}) do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(500, reason)
-    |> halt
-  end
-
-  defp response_post(conn, :ok) do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(201, "Created")
-    |> halt
-  end
-  defp response_post(conn, {:error, reason}) do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(500, reason)
-    |> halt
-  end
 end

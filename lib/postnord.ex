@@ -39,7 +39,7 @@ defmodule Postnord do
     if disabled do
       []
     else
-      [Plug.Adapters.Cowboy.child_spec(:http, Postnord.Rest, [], [port: port])]
+      [worker(Postnord.Rest.Server, [port])]
     end
   end
 

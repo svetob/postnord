@@ -59,7 +59,7 @@ defmodule Postnord.RPC.Coordinator do
 
 
   def handle_call({:write_message, _queue, message}, from, hosts) do
-    id = Postnord.IdGen.id()
+    id = Postnord.IdGen.message_id()
     partition = nil # TODO Choose partition for queue
 
     spawn_link fn ->

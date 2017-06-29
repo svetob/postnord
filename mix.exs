@@ -28,6 +28,7 @@ defmodule Postnord.Mixfile do
     [
       {:random_bytes, "~> 1.0"},
       {:httpoison, "~> 0.11.1"},
+      {:poison, "~> 3.1"},
 
       # gRPC and Protobuf
       {:grpc, github: "tony612/grpc-elixir"},
@@ -45,7 +46,8 @@ defmodule Postnord.Mixfile do
 
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.4", only: :dev, runtime: false}
+      {:dialyxir, "~> 0.4", only: :dev, runtime: false},
+      {:remix, "~> 0.0.1", only: :dev} # Automatic hot code reload when saving file
     ]
   end
 end
