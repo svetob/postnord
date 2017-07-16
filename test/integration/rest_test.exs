@@ -1,9 +1,13 @@
 defmodule Postnord.Test.Integration.REST do
   use ExUnit.Case, async: false
 
+  @moduledoc """
+  Test REST interface and functionality.
+  """
+
   test "can check server status" do
     %HTTPotion.Response{body: body, status_code: 200} = HTTPotion.get(uri("/"))
-    assert Poison.decode!(body) == %{"status" => "ok"}
+    assert Poison.decode!(body)["status"] == "ok"
   end
 
   test "can write and get message" do

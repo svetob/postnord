@@ -18,6 +18,7 @@ defmodule Postnord.GRPC.Node.Server do
   """
 
   def write(write_request, _stream) do
+    Logger.debug "#{__MODULE__} Write request received"
     case Coordinator.write_message(write_request.queue, write_request.message) do
       :ok ->
         WriteReply.new(response: :OK)
@@ -27,6 +28,7 @@ defmodule Postnord.GRPC.Node.Server do
   end
 
   def read(read_request, _stream) do
+    Logger.debug "#{__MODULE__} Read request received"
     case Coordinator.read_message(read_request.queue) do
       {:ok, id, message} ->
         ReadReply.new(response: :OK, id: id, message: message)
@@ -38,10 +40,12 @@ defmodule Postnord.GRPC.Node.Server do
   end
 
   def confirm(confirm_request, _stream) do
+    Logger.debug "#{__MODULE__} Confirm request received"
     handle_confirm(confirm_request)
   end
 
   defp handle_confirm(%ConfirmRequest{confirmation: :ACCEPT, id: id}) do
+    Logger.debug "#{__MODULE__} Confirm :ACCEPT request received"
     case PartitionConsumer.accept(PartitionConsumer, id) do
       res when res in [:ok, :noop]  ->
         ConfirmReply.new(response: :OK)
@@ -51,11 +55,12 @@ defmodule Postnord.GRPC.Node.Server do
   end
 
   def replicate(replicate_request, _stream) do
+    Logger.debug "#{__MODULE__} Replicate request received"
     case Partition.replicate_message(Partition, replicate_request.id, replicate_request.message) do
       :ok ->
-        ReplicateReply.new(response: :OK)
+        ReplicateReply.new(success: true)
       {:error, reason} ->
-        ReplicateReply.new(response: :ERROR, error_message: error_message(reason))
+        ReplicateReply.new(error_message: error_message(reason))
     end
   end
 

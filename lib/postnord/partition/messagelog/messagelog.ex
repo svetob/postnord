@@ -31,7 +31,7 @@ defmodule Postnord.MessageLog do
   """
 
   @file_name "message.log"
-  @file_opts [:binary, :append]
+  @file_opts [:binary, :append, :sync]
 
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)

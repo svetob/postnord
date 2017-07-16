@@ -1,6 +1,10 @@
 defmodule Postnord.Test.Integration.GRPC do
   use ExUnit.Case, async: false
 
+  @moduledoc """
+  Test gRPC server endpoints, client and functionality.
+  """
+
   test "can connect to gRPC server" do
     {:ok, _chan} = GRPC.Stub.connect(uri())
   end

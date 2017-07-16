@@ -47,7 +47,7 @@ defmodule Postnord.Mixfile do
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},
       {:dialyxir, "~> 0.4", only: :dev, runtime: false},
-      {:remix, "~> 0.0.1", only: :dev}, # Automatic hot code reload when saving file
+      #{:remix, "~> 0.0.1", only: :dev}, # Automatic hot code reload when saving file
 
       # Test utils
       {:httpotion, "~> 3.0.2"}

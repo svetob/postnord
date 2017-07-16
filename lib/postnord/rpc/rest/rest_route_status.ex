@@ -14,7 +14,10 @@ defmodule Postnord.Rest.Route.Status do
   end
 
   def status(req, state) do
-    response = %{status: :ok} |> Poison.encode!()
+    response = %{
+      status: :ok,
+      state: Postnord.Cluster.State.get()
+    } |> Poison.encode!()
   	{response, req, state}
   end
 end

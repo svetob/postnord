@@ -1,4 +1,6 @@
 defmodule Postnord.Rest.Server do
+  require Logger
+
   @moduledoc """
   Launches the Cowboy REST server.
 
@@ -8,6 +10,7 @@ defmodule Postnord.Rest.Server do
   """
 
   def start_link(port) do
+    Logger.info "Starting #{__MODULE__} on port #{port}"
    	:cowboy.start_clear(:http, 100, [{:port, port}], %{
    		env: %{dispatch: dispatch()}
    	})

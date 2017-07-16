@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package postnord;
+package Postnord.GRPC;
 
 // Service definition for a Postnord node.
 service Node {
@@ -91,7 +91,7 @@ message ConfirmReply {
 // Replicate request message containing message to replicate
 message ReplicateRequest {
   string partition = 1;
-  string id = 2;
+  bytes id = 2;
   bytes message = 3;
 }
 

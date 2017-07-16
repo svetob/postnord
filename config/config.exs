@@ -26,7 +26,7 @@ config :grpc,
 # Disable lager, use default elixir Logger
 config :lager, :error_logger_redirect, false
 config :lager, :error_logger_whitelist, [Logger.ErrorHandler]
-config :lager, :crash_log, false
+config :lager, :crash_log, true
 config :lager, :handlers, [{LagerLogger, [level: :warn]}]
 
 import_config "#{Mix.env}.exs"

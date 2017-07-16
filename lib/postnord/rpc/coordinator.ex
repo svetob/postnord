@@ -23,20 +23,20 @@ defmodule Postnord.RPC.Coordinator do
     |> Enum.filter(fn child -> child != nil end)
     Supervisor.start_link(children, [strategy: :one_for_one])
 
-    sender_info = senders |> Enum.map(fn {name, module, _} -> {name, module} end)
+    sender_info = senders |> Enum.map(fn {module, name, _} -> {module, name} end)
     {:ok, sender_info}
   end
 
   defp rpc_sender({host_id, _host_path}, my_id) when host_id == my_id do
-    name = rpc_sender_name("local")
     module = Postnord.RPC.Client.Local
-    {name, module, nil}
+    name = rpc_sender_name("local")
+    {module, name, nil}
   end
 
   defp rpc_sender({host_id, host_path}, my_id) when host_id != my_id do
-    name = rpc_sender_name(host_id)
     module = Postnord.RPC.Client.GRPC
-    child = worker(Postnord.RPC.Client.GRPC, [host_path, [name: name]])
+    name = rpc_sender_name(host_id)
+    child = worker(Postnord.RPC.Client.GRPC, [host_path, [name: name]], [id: name])
     {module, name, child}
   end
 
@@ -63,7 +63,7 @@ defmodule Postnord.RPC.Coordinator do
     partition = nil # TODO Choose partition for queue
 
     spawn_link fn ->
-      hosts |> Enum.each(fn {name, module} ->
+      hosts |> Enum.each(fn {module, name} ->
         Task.async(module, :replicate, [name, partition, id, message])
       end)
 
@@ -87,7 +87,7 @@ defmodule Postnord.RPC.Coordinator do
     partition = nil # TODO Extract partition from public ID
 
     spawn_link fn ->
-      hosts |> Enum.each(fn {name, module} ->
+      hosts |> Enum.each(fn {module, name} ->
         Task.async(module, :tombstone, [name, partition, id])
       end)
 

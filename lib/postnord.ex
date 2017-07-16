@@ -9,7 +9,8 @@ defmodule Postnord do
   def main(args \\ []) do
     :ok = parse_input(args)
 
-    my_id = RandomBytes.uuid()
+    my_id = Application.get_env(:postnord, :node_id) || Postnord.IdGen.node_id()
+
     Postnord.Cluster.State.start_link(my_id)
 
     # Start and supervise application processes
@@ -69,8 +70,8 @@ defmodule Postnord do
     |> Commando.with_switch(:disable_grpc_server, :boolean, "Do not start the gRPC server")
     |> Commando.with_switch(:data_path, :string, "Data path", alias: :d,
                             default: Application.get_env(:postnord, :data_path))
-    |> Commando.with_switch(:replica_nodes, :string, "Semicolon-separated list of replica node URLs", alias: :r,
-                            default: :postnord |> Application.get_env(:replica_nodes) |> Enum.join(";"))
+    # |> Commando.with_switch(:replica_nodes, :string, "Semicolon-separated list of replica node URLs", alias: :r,
+    #                         default: :postnord |> Application.get_env(:replica_nodes) |> Enum.join(";"))
     |> Commando.with_switch(:data_path, :string, "Data path", alias: :d,
                             default: Application.get_env(:postnord, :data_path))
   end

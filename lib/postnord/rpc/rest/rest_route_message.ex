@@ -32,12 +32,12 @@ defmodule Postnord.Rest.Route.Message do
   defp reply_get(:empty, req), do:
     :cowboy_req.reply(204, req)
   defp reply_get({:error, reason}, req), do:
-    :cowboy_req.reply(500, [{"content-type", "text/plain"}], reason, req)
+    :cowboy_req.reply(500, %{"content-type" => "text/plain"}, reason, req)
 
   defp reply_post(:ok, req), do:
     :cowboy_req.reply(201, req)
   defp reply_post({:error, reason}, req), do:
-    :cowboy_req.reply(500, [{"content-type", "text/plain"}], reason, req)
+    :cowboy_req.reply(500, %{"content-type" => "text/plain"}, reason, req)
 
   defp read_full_request_body(req) do
     case :cowboy_req.read_body(req) do
@@ -55,7 +55,7 @@ defmodule Postnord.Rest.Route.Message do
   defp queue_read(queue) do
     case PartitionConsumer.read(PartitionConsumer) do
       {:ok, id, message} ->
-        if accept(id) do
+        if accept(queue, id) do
           {:ok, message}
         else
           queue_read(queue)
@@ -69,7 +69,7 @@ defmodule Postnord.Rest.Route.Message do
     Coordinator.write_message(queue, message)
   end
 
-  defp accept(id) do
-    PartitionConsumer.accept(PartitionConsumer, id) == :ok
+  defp accept(partition, id) do
+    Coordinator.confirm_accept(partition, id) == :ok
   end
 end

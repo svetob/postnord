@@ -27,7 +27,7 @@ defmodule Postnord.IndexLog do
   callback :: callback processes to notify on write
   """
 
-  @file_opts [:append]
+  @file_opts [:binary, :append, :sync]
 
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
@@ -80,6 +80,7 @@ defmodule Postnord.IndexLog do
   # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
     spawn fn ->
+      Logger.debug("#{__MODULE__} Flushing data to #{state.path}")
       state.iodevice
       |> IO.binwrite(state.buffer)
       |> send_callbacks(state.callbacks)
@@ -93,7 +94,7 @@ defmodule Postnord.IndexLog do
     end)
   end
   defp send_callbacks({:error, reason}, callbacks) do
-    Logger.error("Failed writing to index log: #{inspect reason}")
+    Logger.error("#{__MODULE__} Failed writing to index log: #{inspect reason}")
     callbacks |> Enum.each(fn from ->
       GenServer.reply(from, {:error, reason})
     end)
