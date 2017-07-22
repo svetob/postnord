@@ -19,5 +19,4 @@ defmodule Postnord.BinaryConvert do
   def binary_to_integer(binary) do
     Integer.undigits(:erlang.binary_to_list(binary), 256)
   end
-
 end

@@ -120,6 +120,6 @@ defmodule Postnord.Test.MessageLog do
 
 
   defp log_content(context) do
-     IO.read(context[:output_file], :all)
+    IO.read(context[:output_file], :all)
   end
 end

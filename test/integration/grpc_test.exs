@@ -5,6 +5,8 @@ defmodule Postnord.Test.Integration.GRPC do
   Test gRPC server endpoints, client and functionality.
   """
 
+  @grpc_opts [timeout: 200_000]
+
   test "can connect to gRPC server" do
     {:ok, _chan} = GRPC.Stub.connect(uri())
   end
@@ -22,25 +24,25 @@ defmodule Postnord.Test.Integration.GRPC do
 
     # Write a message
     write_request = Postnord.GRPC.WriteRequest.new(message: message)
-    write_reply = Postnord.GRPC.Node.Stub.write(chan, write_request, timeout: 100_000)
+    write_reply = Postnord.GRPC.Node.Stub.write(chan, write_request)
 
     assert write_reply.response == :OK
 
     # Read message
     read_request = Postnord.GRPC.ReadRequest.new()
-    read_reply = Postnord.GRPC.Node.Stub.read(chan, read_request, timeout: 100_000)
+    read_reply = Postnord.GRPC.Node.Stub.read(chan, read_request, @grpc_opts)
 
     assert read_reply.response == :OK
     assert read_reply.message == message
 
     # Confirm message
     confirm_request = Postnord.GRPC.ConfirmRequest.new(confirmation: :ACCEPT, id: read_reply.id)
-    confirm_reply = Postnord.GRPC.Node.Stub.confirm(chan, confirm_request, timeout: 100_000)
+    confirm_reply = Postnord.GRPC.Node.Stub.confirm(chan, confirm_request, @grpc_opts)
 
     assert confirm_reply.response == :OK
 
     # Ensure message is confirmed
-    read_reply = Postnord.GRPC.Node.Stub.read(chan, read_request, timeout: 100_000)
+    read_reply = Postnord.GRPC.Node.Stub.read(chan, read_request, @grpc_opts)
 
     assert read_reply.response == :EMPTY
   end
@@ -54,25 +56,25 @@ defmodule Postnord.Test.Integration.GRPC do
 
     # Write a message
     write_request = Postnord.GRPC.WriteRequest.new(message: message)
-    write_reply = Postnord.GRPC.Node.Stub.write(chan_write, write_request, timeout: 100_000)
+    write_reply = Postnord.GRPC.Node.Stub.write(chan_write, write_request, @grpc_opts)
 
     assert write_reply.response == :OK
 
     # Read message
     read_request = Postnord.GRPC.ReadRequest.new()
-    read_reply = Postnord.GRPC.Node.Stub.read(chan_read, read_request, timeout: 100_000)
+    read_reply = Postnord.GRPC.Node.Stub.read(chan_read, read_request, @grpc_opts)
 
     assert read_reply.response == :OK
     assert read_reply.message == message
 
     # Confirm message
     confirm_request = Postnord.GRPC.ConfirmRequest.new(confirmation: :ACCEPT, id: read_reply.id)
-    confirm_reply = Postnord.GRPC.Node.Stub.confirm(chan_confirm, confirm_request, timeout: 100_000)
+    confirm_reply = Postnord.GRPC.Node.Stub.confirm(chan_confirm, confirm_request, @grpc_opts)
 
     assert confirm_reply.response == :OK
 
     # Ensure message is confirmed
-    read_reply = Postnord.GRPC.Node.Stub.read(chan_read, read_request, timeout: 100_000)
+    read_reply = Postnord.GRPC.Node.Stub.read(chan_read, read_request, @grpc_opts)
 
     assert read_reply.response == :EMPTY
   end

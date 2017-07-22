@@ -25,3 +25,7 @@ erl_crash.dump
 
 # Ignore lager logs
 /log
+
+# Ignore IntelliJ IDEA project files
+.idea
+*.iml

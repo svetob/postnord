@@ -2,12 +2,22 @@ defmodule Postnord.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :postnord,
-     version: "0.1.0",
-     elixir: "~> 1.4.5",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps()]
+    [
+      app: :postnord,
+      version: "0.1.0",
+      elixir: "~> 1.4.5",
+      build_embedded: Mix.env == :prod,
+      start_permanent: Mix.env == :prod,
+      deps: deps(),
+      aliases: [
+        test: [&clean_test_data/1, "test"]
+      ]
+    ]
+  end
+
+  # Clear test data from previous runs
+  def clean_test_data(_) do
+    File.rm_rf("test/data/")
   end
 
   # Configuration for escript binary compiler
