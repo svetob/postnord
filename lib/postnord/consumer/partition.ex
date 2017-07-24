@@ -10,7 +10,8 @@ defmodule Postnord.Consumer.PartitionConsumer.State do
             indexlog_path: "",
             indexlog_iodevice: nil,
             indexlog_bytes_read: 0,
-            tombstones: MapSet.new()
+            tombstones: MapSet.new(),
+            timestamp_cutoff: 0
 end
 
 defmodule Postnord.Consumer.PartitionConsumer do
@@ -57,12 +58,19 @@ defmodule Postnord.Consumer.PartitionConsumer do
                          indexlog_path: Path.join(state.path, "index.log")}}
   end
 
+  @spec read(pid(), integer) :: {:ok, iolist(), iolist()} | :empty | {:error, any()}
   def read(pid, timeout \\ 5_000) do
     GenServer.call(pid, :read, timeout)
   end
 
+  @spec accept(pid(), iolist(), integer) :: :ok | :noop | {:error, any()}
   def accept(pid, id, timeout \\ 5_000) do
     GenServer.call(pid, {:accept, id}, timeout)
+  end
+
+  @spec flush(pid(), integer) :: :ok | {:error, any()}
+  def flush(pid, timeout \\ 5_000) do
+    GenServer.call(pid, {:flush}, timeout)
   end
 
   def handle_call(:read, _from, state) do
@@ -81,6 +89,10 @@ defmodule Postnord.Consumer.PartitionConsumer do
       tombstones = state.tombstones |> MapSet.put(tombstone)
       {:reply, :ok, %State{state | tombstones: tombstones}}
     end
+  end
+
+  def handle_call({:flush}, _from, state) do
+    {:reply, :ok, %State{state | timestamp_cutoff: Postnord.now()}}
   end
 
   defp tombstoned?(%State{tombstones: tombstones}, tombstone) do

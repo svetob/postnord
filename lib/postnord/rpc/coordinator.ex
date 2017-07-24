@@ -44,39 +44,45 @@ defmodule Postnord.RPC.Coordinator do
     String.to_atom("rpc_sender_#{host_id}")
   end
 
-
+  @spec write_message(String.t, integer) :: :ok | {:error, any()}
   def write_message(queue, message, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:write_message, queue, message}, timeout)
   end
 
+  @spec read_message(String.t, integer) :: :ok | {:error, any()}
   def read_message(queue, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:read_message, queue}, timeout)
   end
 
+  @spec confirm_accept(String.t, iolist(), integer) :: :ok | {:error, any()}
   def confirm_accept(queue, id, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:confirm_accept, queue, id}, timeout)
+  end
+
+  @spec flush(String.t, integer) :: :ok | {:error, any()}
+  def flush(queue, timeout \\ 5_000) do
+    GenServer.call(__MODULE__, {:flush, queue}, timeout)
   end
 
 
   def handle_call({:write_message, _queue, message}, from, hosts) do
     id = Postnord.IdGen.message_id()
     partition = nil # TODO Choose partition for queue
+    timestamp = Postnord.now()
 
     spawn_link fn ->
-      hosts |> Enum.each(fn {module, name} ->
-        Task.async(module, :replicate, [name, partition, id, message])
+      Logger.debug "#{__MODULE__} Coordinating write_message request"
+      hosts
+      |> Enum.map(fn {module, name} ->
+        Task.async(module, :replicate, [name, partition, id, timestamp, message])
       end)
-
-      result = hosts
-      |> quorum_required()
-      |> await_result_quorum(Enum.count(hosts))
-
-      GenServer.reply(from, result)
+      |> handle_response(from)
     end
     {:noreply, hosts}
   end
 
   def handle_call({:read_message, _queue}, from, hosts) do
+    Logger.debug "#{__MODULE__} Coordinating read_message request"
     spawn_link fn ->
       GenServer.reply(from, PartitionConsumer.read(PartitionConsumer))
     end
@@ -84,25 +90,44 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:confirm_accept, _queue, id}, from, hosts) do
+    Logger.debug "#{__MODULE__} Coordinating accept request"
     partition = nil # TODO Extract partition from public ID
 
     spawn_link fn ->
-      hosts |> Enum.each(fn {module, name} ->
+      hosts
+      |> Enum.map(fn {module, name} ->
         Task.async(module, :tombstone, [name, partition, id])
       end)
-
-      result = hosts
-      |> quorum_required()
-      |> await_result_quorum(Enum.count(hosts))
-
-      GenServer.reply(from, result)
+      |> handle_response(from)
     end
     {:noreply, hosts}
   end
 
+  def handle_call({:flush, queue}, from, hosts) do
+    Logger.debug "#{__MODULE__} Coordinating flush request"
+    spawn_link fn ->
+      hosts
+      |> Enum.map(fn {module, name} ->
+        Task.async(module, :flush, [name, queue])
+      end)
+      |> handle_response(from)
+    end
+    {:noreply, hosts}
+  end
+
+
+  defp handle_response(tasks, from) do
+    count = Enum.count(tasks)
+
+    result = count
+    |> quorum_required()
+    |> await_result_quorum(count)
+
+    GenServer.reply(from, result)
+  end
+
   # Calculate required quorum for host set
-  defp quorum_required(hosts) do
-    node_count = Enum.count(hosts)
+  defp quorum_required(node_count) do
     round(Float.floor(node_count/2)) + 1
   end
 
@@ -112,6 +137,7 @@ defmodule Postnord.RPC.Coordinator do
     :ok
   end
   defp await_result_quorum(required, total, _timeout, ok, failed) when failed > (total - required) do
+    Logger.warn "Quorum failed: #{required} required, #{ok} succeeded, #{failed} failed"
     {:error, "Quorum failed: #{required} required, #{ok} succeeded, #{failed} failed"}
   end
   defp await_result_quorum(required, total, timeout, ok, failed) do
@@ -122,6 +148,7 @@ defmodule Postnord.RPC.Coordinator do
         await_result_quorum(required, total, timeout, ok, failed + 1)
     after
       timeout ->
+        Logger.warn "Quorum failed: #{required} required, #{ok} responded"
         {:error, "Quorum failed: #{required} required, #{ok} responded"}
     end
   end

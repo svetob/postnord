@@ -35,22 +35,26 @@ defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
   #       It will resend a message until it is accepted, and not resend earlier
   #       requeued entries.
   defp scan_index_entries(state) do
-    case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, Entry.byte_size) do
+    case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, Entry.entry_size) do
       :eof -> :empty
       {:error, reason} ->
         Logger.error("Failed to read index log entry: #{inspect reason}")
         {:error, reason}
       {:ok, bytes} ->
         entry = Entry.from_bytes(bytes)
-        if state.tombstones |> MapSet.member?(tombstone(entry)) do
-          # Message is tombstoned, proceed
-          state = %State{state | indexlog_bytes_read: state.indexlog_bytes_read + Entry.byte_size}
+        if consumed?(entry, state) do
+          # Message is consumed, proceed
+          state = %State{state | indexlog_bytes_read: state.indexlog_bytes_read + Entry.entry_size}
           scan_index_entries(state)
         else
           # Message not tombstoned, read it
           {:ok, state, entry}
         end
     end
+  end
+
+  defp consumed?(entry, state) do
+    entry.timestamp <= state.timestamp_cutoff or state.tombstones |> MapSet.member?(tombstone(entry))
   end
 
   defp tombstone(entry), do: %Tombstone{id: entry.id}

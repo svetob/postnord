@@ -8,16 +8,8 @@ defmodule Postnord.Mixfile do
       elixir: "~> 1.4.5",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      deps: deps(),
-      aliases: [
-        test: [&clean_test_data/1, "test"]
-      ]
+      deps: deps()
     ]
-  end
-
-  # Clear test data from previous runs
-  def clean_test_data(_) do
-    File.rm_rf("test/data/")
   end
 
   # Configuration for escript binary compiler

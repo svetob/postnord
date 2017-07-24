@@ -55,9 +55,9 @@ defmodule Postnord.Partition do
   @doc """
   Replicate a single message to this partition on this node.
   """
-  def replicate_message(pid, id, bytes, timeout \\ 5_000) do
+  def replicate_message(pid, id, timestamp, bytes, timeout \\ 5_000) do
     try do
-      GenServer.call(pid, {:replicate, id, bytes}, timeout)
+      GenServer.call(pid, {:replicate, id, timestamp, bytes}, timeout)
     catch
       :exit, reason ->
         Logger.error "Replication failed: #{inspect reason}"
@@ -65,16 +65,16 @@ defmodule Postnord.Partition do
     end
   end
 
-  def handle_call({:replicate, id, bytes}, from, nil) do
+  def handle_call({:replicate, id, timestamp, bytes}, from, nil) do
     spawn fn ->
-      write_to_logs(id, bytes)
+      write_to_logs(id, timestamp, bytes)
       GenServer.reply(from, :ok)
     end
     {:noreply, nil}
   end
 
-  defp write_to_logs(id, bytes) do
+  defp write_to_logs(id, timestamp, bytes) do
     {:ok, offset, len} = MessageLog.write(MessageLog, bytes)
-    :ok = IndexLog.write(IndexLog, %Entry{id: id, offset: offset, len: len})
+    :ok = IndexLog.write(IndexLog, %Entry{id: id, timestamp: timestamp, offset: offset, len: len})
   end
 end

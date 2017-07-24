@@ -7,9 +7,11 @@ defmodule Postnord.GRPC.Node.Service do
   rpc :Write, Postnord.GRPC.WriteRequest, Postnord.GRPC.WriteReply
   rpc :Read, Postnord.GRPC.ReadRequest, Postnord.GRPC.ReadReply
   rpc :Confirm, Postnord.GRPC.ConfirmRequest, Postnord.GRPC.ConfirmReply
-  rpc :Replicate, Postnord.GRPC.ReplicateRequest, Postnord.GRPC.ReplicateReply
+  rpc :Flush, Postnord.GRPC.FlushRequest, Postnord.GRPC.GenericReply
+  rpc :Replicate, Postnord.GRPC.ReplicateRequest, Postnord.GRPC.GenericReply
   rpc :AcquireHold, Postnord.GRPC.AcquireHoldRequest, Postnord.GRPC.AcquireHoldReply
-  rpc :Tombstone, Postnord.GRPC.TombstoneRequest, Postnord.GRPC.TombstoneReply
+  rpc :Tombstone, Postnord.GRPC.TombstoneRequest, Postnord.GRPC.GenericReply
+  rpc :ReplicateFlush, Postnord.GRPC.FlushRequest, Postnord.GRPC.GenericReply
 end
 
 defmodule Postnord.GRPC.Node.Stub do
@@ -36,17 +38,29 @@ service Node {
   // Confirm receival a message. Accept, Reject or Requeue
   rpc Confirm (ConfirmRequest) returns (ConfirmReply) {}
 
+  // Flush all messages from a queue
+  rpc Flush (FlushRequest) returns (GenericReply) {}
+
   // ---- Private RPCs
   // These RPC's are cluster operations called by Postnord nodes.
 
   // Replicate a message
-  rpc Replicate (ReplicateRequest) returns (ReplicateReply) {}
+  rpc Replicate (ReplicateRequest) returns (GenericReply) {}
 
   // Acquire a consumer hold for the message
   rpc AcquireHold (AcquireHoldRequest) returns (AcquireHoldReply) {}
 
   // Tombstone a message
-  rpc Tombstone (TombstoneRequest) returns (TombstoneReply) {}
+  rpc Tombstone (TombstoneRequest) returns (GenericReply) {}
+
+  // Replicate flush operation
+  rpc ReplicateFlush (FlushRequest) returns (GenericReply) {}
+}
+
+// Generic success or error reply
+message GenericReply {
+  bool success = 1;
+  string error_message = 2;
 }
 
 message WriteRequest {
@@ -107,12 +121,17 @@ message ConfirmReply {
   string error_message = 2;
 }
 
+message FlushRequest {
+  string queue = 1;
+}
+
 
 // Replicate request message containing message to replicate
 message ReplicateRequest {
   string partition = 1;
   bytes id = 2;
-  bytes message = 3;
+  uint64 timestamp = 3;
+  bytes message = 4;
 }
 
 // Replicate response message containing request status
@@ -124,7 +143,7 @@ message ReplicateReply {
 // Replicate request message containing message to replicate
 message AcquireHoldRequest {
   string partition = 1;
-  string id = 2;
+  bytes id = 2;
   string candidate = 3;
 }
 
@@ -140,16 +159,10 @@ message AcquireHoldReply {
   string error_message = 2;
 }
 
-// Replicate request message containing message to replicate
+// Tombstone request message containing message to tombstone
 message TombstoneRequest {
   string partition = 1;
-  string id = 2;
-}
-
-// Replicate response message containing request status
-message TombstoneReply {
-  bool success = 1;
-  string error_message = 2;
+  bytes id = 2;
 }
   """
 end

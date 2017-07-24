@@ -131,12 +131,17 @@ defmodule Postnord.Test.Consumer.Partition do
     Enum.reduce(messages, [], fn (m, acc) ->
       id = Postnord.IdGen.message_id()
       case acc do
-        [] -> [%Entry{id: id, offset: 0, len: byte_size m}]
+        [] ->
+          [%Entry{id: id,
+                  offset: 0,
+                  len: byte_size(m),
+                  timestamp: Postnord.now()}]
         _ ->
           prev = List.last(acc)
           acc ++ [%Entry{id: id,
-                        offset: prev.offset + prev.len,
-                        len: byte_size m}]
+                         offset: prev.offset + prev.len,
+                         len: byte_size(m),
+                         timestamp: Postnord.now()}]
       end
     end)
   end

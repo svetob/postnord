@@ -69,8 +69,8 @@ defmodule Postnord.Test.MessageLog do
 
     1..sample_size |> Enum.each(fn n ->
       spawn_link fn ->
-        msg = RandomBytes.base16(n)
-        {:ok, _, _} = MessageLog.write(context[:pid], msg)
+        msg = :crypto.strong_rand_bytes(n)
+        {:ok, _, n} = MessageLog.write(context[:pid], msg)
         send me, {:ok, n}
       end
     end)
@@ -103,9 +103,8 @@ defmodule Postnord.Test.MessageLog do
       {:ok, _, _} = MessageLog.write(context[:pid], "B")
     end
     # Send message of size buffer_size
-    msg_big = Enum.join(List.duplicate("X", @buffer_size))
     {time_large, _} = :timer.tc fn ->
-      {:ok, _, _} = MessageLog.write(context[:pid], msg_big)
+      {:ok, _, _} = MessageLog.write(context[:pid], :crypto.strong_rand_bytes(@buffer_size))
     end
     # Send small message
     {time_c, _} = :timer.tc fn ->

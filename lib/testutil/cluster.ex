@@ -66,8 +66,13 @@ defmodule TestUtil.Cluster do
     :rpc.block_call(node, :code, :add_paths, [:code.get_path()])
   end
 
+  # Add all non-test elixir files
   defp add_elixir_code_files(node) do
-    Code.loaded_files() |> Enum.each(fn file ->
+    Code.loaded_files()
+    |> Enum.filter(fn x ->
+      String.contains?(to_string(x), "test") == false
+    end)
+    |> Enum.each(fn file ->
       :rpc.block_call(node, Code, :load_file, [file])
     end)
   end
