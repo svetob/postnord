@@ -23,7 +23,7 @@ defmodule Postnord.RPC.Client.Rest do
   end
 
   def tombstone(pid, partition, id, timeout \\ 5_000) do
-    GenServer.call(pid, {:tombstone, id}, timeout)
+    GenServer.call(pid, {:tombstone, partition, id}, timeout)
   end
 
   def flush(pid, queue, timeout \\ 5_000) do
@@ -33,7 +33,7 @@ defmodule Postnord.RPC.Client.Rest do
   def handle_call({:replicate, _partition, id, timestamp, message}, from, node_uri) do
     spawn_link fn ->
         id_encoded = Id.message_id_encode(id)
-        uri = node_uri <> "/queue/q/message/#{id_encoded}/timestamp/#{timestamp}/replicate"
+        uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/timestamp/#{timestamp}/replicate"
 
         Logger.debug "#{__MODULE__} Sending replicate request to #{uri}"
 
@@ -54,7 +54,7 @@ defmodule Postnord.RPC.Client.Rest do
   def handle_call({:tombstone, _partition, id}, from, node_uri) do
     spawn_link fn ->
         id_encoded = Id.message_id_encode(id)
-        uri = node_uri <> "/queue/q/message/#{id_encoded}/tombstone"
+        uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/tombstone"
 
         Logger.debug "#{__MODULE__} Sending tombstone request to #{uri}"
 
@@ -74,7 +74,7 @@ defmodule Postnord.RPC.Client.Rest do
 
   def handle_call({:flush, queue}, from, node_uri) do
     spawn_link fn ->
-        uri = node_uri <> "/queue/#{queue}/flush"
+        uri = node_uri <> "/rpc/queue/#{queue}/flush"
 
         Logger.debug "#{__MODULE__} Sending flush request to #{uri}"
 

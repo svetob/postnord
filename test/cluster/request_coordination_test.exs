@@ -28,12 +28,15 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
   end
 
   setup context do
-    on_exit fn ->
-      Logger.info "Flushing cluster"
-      uri = hd context[:uris]
-      %HTTPoison.Response{status_code: 202} = Rest.flush_queue(uri)
-    end
-    context
+    flush_cluster(context[:uris])
+    :ok
+  end
+
+  def flush_cluster(uris) do
+    Logger.info "Flushing cluster"
+    uri = hd uris
+    resp_flush = Rest.flush_queue(uri)
+    assert resp_flush.status_code == 202
   end
 
 
@@ -52,52 +55,75 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
     assert resp_get.body == message
   end
 
-  # test "cannot see message from any node after queue flush", context do
-  #   uri_a = hd(context[:uris])
-  #
-  #   message = RandomBytes.base62(1024)
-  #
-  #   # TODO Write
-  #
-  #   # TODO Flush
-  #
-  #   Process.sleep(100)
-  #
-  #   context[:uris] |> Enum.each(fn node ->
-  #     # TODO Assert empty read
-  #   end)
-  # end
-  #
-  #
+  test "cannot see message from any node after queue flush", context do
+    [uri_a, uri_b, _] = context[:uris]
+
+    message = RandomBytes.base62(1024)
+
+    # Write message to node A
+    resp_post = Rest.post_message(uri_a, message)
+    assert resp_post.status_code == 201
+
+    # Flush queue from node B
+    resp_flush = Rest.flush_queue(uri_b)
+    assert resp_flush.status_code == 202
+
+    # Read from any node returns no content
+    Enum.each(context[:uris], fn node ->
+      resp_get = Rest.get_message(uri_b)
+      assert resp_get.status_code == 204
+    end)
+  end
+
+  # TODO Requires message holds
   # test "cannot see a message from any node once it has been read", context do
   #   [uri_a, uri_b, _] = context[:uris]
   #
   #   message = RandomBytes.base62(1024)
   #
-  #   # TODO Write
+  #   # Write message to node A
+  #   resp_post = Rest.post_message(uri_a, message)
+  #   assert resp_post.status_code == 201
   #
-  #   # TODO Read
+  #   # Read message from node B
+  #   resp_get = Rest.get_message(uri_b)
+  #   assert resp_get.status_code == 200
+  #   assert resp_get.body == message
   #
-  #   context[:uris] |> Enum.each(fn node ->
-  #     # TODO Assert empty read
-  #   end)
-  # end
-  #
-  # test "cannot see a message from any node once it has been accepted", context do
-  #   [uri_a, uri_b, _] = context[:uris]
-  #
-  #   message = RandomBytes.base62(1024)
-  #
-  #   # TODO Write
-  #
-  #   # TODO Read
-  #
-  #   # TODO Accept
-  #
+  #   # TODO Sleep should not be necessary
   #   Process.sleep(100)
   #
-  #   context[:uris] |> Enum.each(fn node ->
-  #     # TODO Assert empty read
+  #   Enum.each(context[:uris], fn node ->
+  #     resp_get = Rest.get_message(uri_b)
+  #     assert resp_get.status_code == 204
   #   end)
   # end
+
+  test "cannot see a message from any node once it has been accepted", context do
+    [uri_a, uri_b, _] = context[:uris]
+
+    message = RandomBytes.base62(1024)
+
+    # Write message to node A
+    resp_post = Rest.post_message(uri_a, message)
+    assert resp_post.status_code == 201
+
+    # Read message from node B
+    resp_get = Rest.get_message(uri_b)
+    assert resp_get.status_code == 200
+    assert resp_get.body == message
+    id = Rest.headers_message_id(resp_get.headers)
+
+    # Accept message from node B
+    resp_accept = Rest.accept_message(uri_b, id)
+    assert resp_accept.status_code == 202
+
+    # TODO Sleep should not be necessary
+    Process.sleep(100)
+
+    Enum.each(context[:uris], fn node ->
+      resp_get = Rest.get_message(uri_b)
+      assert resp_get.status_code == 204
+    end)
+  end
 end

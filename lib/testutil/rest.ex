@@ -11,17 +11,17 @@ defmodule TestUtil.Rest do
     "#{host}/queue/q/message/#{id}/accept" |> HTTPoison.post!("")
   end
 
-  def replicate_message(host, id, timestamp, message) do
-    "#{host}/queue/q/message/#{id}/timestamp/#{timestamp}/replicate"
+  def flush_queue(host) do
+    "#{host}/queue/q/flush" |> HTTPoison.post!("")
+  end
+
+  def rpc_replicate_message(host, id, timestamp, message) do
+    "#{host}/rpc/queue/q/message/#{id}/timestamp/#{timestamp}/replicate"
     |> HTTPoison.post!(message)
   end
 
-  def tombstone_message(host, id) do
-    "#{host}/queue/q/message/#{id}/tombstone" |> HTTPoison.post!("")
-  end
-
-  def flush_queue(host) do
-    "#{host}/queue/q/flush" |> HTTPoison.post!("")
+  def rpc_tombstone_message(host, id) do
+    "#{host}/rpc/queue/q/message/#{id}/tombstone" |> HTTPoison.post!("")
   end
 
   def headers_message_id([{"message_id", id} | _]), do: id

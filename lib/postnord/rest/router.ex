@@ -1,7 +1,7 @@
 defmodule Postnord.Rest.Router do
   use Plug.Router
 
-  alias Postnord.Rest.{Status, Queue}
+  alias Postnord.Rest.{Status, Queue, RPC}
 
   plug :match
   plug :dispatch
@@ -35,11 +35,17 @@ defmodule Postnord.Rest.Router do
     |> respond(conn)
   end
 
-  post "queue/:queue/message/:id/timestamp/:timestamp/replicate" do
+  post "queue/:queue/flush" do
+    conn.params["queue"]
+    |> Queue.flush()
+    |> respond(conn)
+  end
+
+  post "rpc/queue/:queue/message/:id/timestamp/:timestamp/replicate" do
     case read_full_body(conn) do
       {:ok, body, conn} ->
         conn.params["queue"]
-        |> Queue.message_replicate(conn.params["id"], conn.params["timestamp"], body)
+        |> RPC.replicate(conn.params["id"], conn.params["timestamp"], body)
         |> respond(conn)
 
       {:error, reason} ->
@@ -47,15 +53,15 @@ defmodule Postnord.Rest.Router do
     end
   end
 
-  post "queue/:queue/message/:id/tombstone" do
+  post "rpc/queue/:queue/message/:id/tombstone" do
     conn.params["queue"]
-    |> Queue.message_tombstone(conn.params["id"])
+    |> RPC.tombstone(conn.params["id"])
     |> respond(conn)
   end
 
-  post "queue/:queue/flush" do
+  post "rpc/queue/:queue/flush" do
     conn.params["queue"]
-    |> Queue.flush()
+    |> RPC.flush()
     |> respond(conn)
   end
 
