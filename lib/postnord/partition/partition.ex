@@ -54,6 +54,7 @@ defmodule Postnord.Partition do
 
   @doc """
   Replicate a single message to this partition on this node.
+  TODO Ensure message does not already exist locally (? or check it is not tombstoned ?)
   """
   def replicate_message(pid, id, timestamp, bytes, timeout \\ 5_000) do
     try do

@@ -5,5 +5,5 @@ defmodule Postnord.Doctest do
   Doctest for all modules that contain only doctests
   """
 
-  doctest Postnord.IdGen
+  doctest Postnord.Id
 end

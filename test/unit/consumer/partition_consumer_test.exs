@@ -129,7 +129,7 @@ defmodule Postnord.Test.Consumer.Partition do
 
   defp entries_for(messages) do
     Enum.reduce(messages, [], fn (m, acc) ->
-      id = Postnord.IdGen.message_id()
+      id = Postnord.Id.message_id()
       case acc do
         [] ->
           [%Entry{id: id,

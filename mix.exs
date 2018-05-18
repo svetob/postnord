@@ -5,7 +5,7 @@ defmodule Postnord.Mixfile do
     [
       app: :postnord,
       version: "0.1.0",
-      elixir: "~> 1.4.5",
+      elixir: "~> 1.6",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       deps: deps()
@@ -28,23 +28,29 @@ defmodule Postnord.Mixfile do
 
   defp deps do
     [
+      # ID generation and representation
       {:random_bytes, "~> 1.0"},
-      {:httpoison, "~> 0.11.1"},
+      {:base62, "~> 1.2"},
+
+      # HTTP client
+      {:httpoison, "~> 1.1.1"},
+
+      # REST API
+      {:cowboy, "~> 2.4", override: true},
+      {:plug, "~> 1.5"},
       {:poison, "~> 3.1"},
 
       # CLI
       {:commando, "~> 0.1"},
 
-      # HTTP REST API
-
       # Logging
-      {:lager_logger, "~> 1.0"},
-      {:lager, "3.5.1", override: true},
+      # {:lager_logger, "~> 1.0"},
+      # {:lager, "3.5.1", override: true},
 
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},
       {:dialyxir, "~> 0.4", only: :dev, runtime: false},
-      #{:remix, "~> 0.0.1", only: :dev}, # Automatic hot code reload when saving file
+      {:remix, "~> 0.0.1", only: :dev},
 
       # Test utils
       {:httpotion, "~> 3.0.2"}

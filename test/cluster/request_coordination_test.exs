@@ -10,7 +10,8 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
   @req_opts [timeout: 10_000_000]
 
   setup_all do
-    cluster = TestUtil.Cluster.create()
+    ports = [2021, 2022, 2023]
+    cluster = TestUtil.Cluster.create(ports)
     Process.sleep(1_000)
 
     on_exit fn ->

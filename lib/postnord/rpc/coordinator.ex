@@ -44,31 +44,31 @@ defmodule Postnord.RPC.Coordinator do
     String.to_atom("rpc_sender_#{host_id}")
   end
 
-  @spec write_message(String.t, integer) :: :ok | {:error, any()}
+  @spec write_message(String.t, integer) :: :ok | {:error, term}
   def write_message(queue, message, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:write_message, queue, message}, timeout)
   end
 
-  @spec read_message(String.t, integer) :: :ok | {:error, any()}
+  @spec read_message(String.t, integer) :: :ok | {:error, term}
   def read_message(queue, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:read_message, queue}, timeout)
   end
 
-  @spec confirm_accept(String.t, iolist(), integer) :: :ok | {:error, any()}
+  @spec confirm_accept(String.t, iolist, integer) :: :ok | {:error, term}
   def confirm_accept(queue, id, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:confirm_accept, queue, id}, timeout)
   end
 
-  @spec flush(String.t, integer) :: :ok | {:error, any()}
+  @spec flush(String.t, integer) :: :ok | {:error, term}
   def flush(queue, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:flush, queue}, timeout)
   end
 
 
   def handle_call({:write_message, _queue, message}, from, hosts) do
-    id = Postnord.IdGen.message_id()
+    id = Postnord.Id.message_id()
     partition = nil # TODO Choose partition for queue
-    timestamp = Postnord.now()
+    timestamp = Postnord.now(:nanosecond)
 
     spawn_link fn ->
       Logger.debug "#{__MODULE__} Coordinating write_message request"
@@ -128,7 +128,7 @@ defmodule Postnord.RPC.Coordinator do
 
   # Calculate required quorum for host set
   defp quorum_required(node_count) do
-    round(Float.floor(node_count/2)) + 1
+    round(Float.floor(node_count / 2)) + 1
   end
 
   # Await task results and determine if quorum was met

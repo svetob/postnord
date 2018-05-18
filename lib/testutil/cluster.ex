@@ -17,7 +17,7 @@ defmodule TestUtil.Cluster do
     enable_node_boot()
 
     nodes = ports
-    |> Enum.map(fn port -> {Postnord.IdGen.node_id(), port} end)
+    |> Enum.map(fn port -> {Postnord.Id.node_id(), port} end)
 
     nodes
     |> Enum.map(&Task.async(fn -> spawn_node(nodes, &1) end))

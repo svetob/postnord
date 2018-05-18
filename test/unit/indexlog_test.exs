@@ -84,7 +84,7 @@ defmodule Postnord.Test.IndexLog do
   end
 
   def random_entry do
-    %Entry{id: Postnord.IdGen.message_id(), offset: 10, len: 20}
+    %Entry{id: Postnord.Id.message_id(), offset: 10, len: 20}
   end
 
 end

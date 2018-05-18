@@ -9,7 +9,7 @@ defmodule Postnord do
   def main(args \\ []) do
     :ok = parse_input(args)
 
-    my_id = Application.get_env(:postnord, :node_id) || Postnord.IdGen.node_id()
+    my_id = Application.get_env(:postnord, :node_id) || Postnord.Id.node_id()
 
     Postnord.Cluster.State.start_link(my_id)
 
@@ -39,7 +39,7 @@ defmodule Postnord do
     if disabled do
       []
     else
-      [worker(Postnord.Rest.Server, [port])]
+      [Plug.Adapters.Cowboy2.child_spec(scheme: :http, plug: Postnord.Rest.Router, options: [port: port])]
     end
   end
 
