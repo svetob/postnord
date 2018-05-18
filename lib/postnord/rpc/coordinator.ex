@@ -34,9 +34,9 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   defp rpc_sender({host_id, host_path}, my_id) when host_id != my_id do
-    module = Postnord.RPC.Client.GRPC
+    module = Postnord.RPC.Client.HTTP
     name = rpc_sender_name(host_id)
-    child = worker(Postnord.RPC.Client.GRPC, [host_path, [name: name]], [id: name])
+    child = worker(Postnord.RPC.Client.HTTP, [host_path, [name: name]], [id: name])
     {module, name, child}
   end
 

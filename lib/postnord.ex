@@ -16,8 +16,7 @@ defmodule Postnord do
     # Start and supervise application processes
     children = worker_postnord() ++
                worker_coordinator() ++
-               worker_http_server() ++
-               worker_grpc_server()
+               worker_http_server()
 
     Supervisor.start_link(children, [
       strategy: :one_for_one,
@@ -44,16 +43,6 @@ defmodule Postnord do
     end
   end
 
-  defp worker_grpc_server do
-    port = Application.get_env(:postnord, :grpc_port)
-    disabled = Application.get_env(:postnord, :disable_grpc_server, false)
-    if disabled do
-      []
-    else
-      [supervisor(GRPC.Server.Supervisor, [{Postnord.GRPC.Node.Server, port}])]
-    end
-  end
-
   @doc """
   Create CLI options parser with all configurable options and their descriptions.
   """
@@ -64,16 +53,11 @@ defmodule Postnord do
     |> Commando.with_help()
     |> Commando.with_switch(:port, :integer, "HTTP server port", alias: :p,
                             default: Application.get_env(:postnord, :port))
-    |> Commando.with_switch(:grpc_port, :integer, "GRPC server port", alias: :gp,
-                            default: Application.get_env(:postnord, :grpc_port))
     |> Commando.with_switch(:disable_http_server, :boolean, "Do not start the HTTP server")
-    |> Commando.with_switch(:disable_grpc_server, :boolean, "Do not start the gRPC server")
     |> Commando.with_switch(:data_path, :string, "Data path", alias: :d,
                             default: Application.get_env(:postnord, :data_path))
     # |> Commando.with_switch(:replica_nodes, :string, "Semicolon-separated list of replica node URLs", alias: :r,
     #                         default: :postnord |> Application.get_env(:replica_nodes) |> Enum.join(";"))
-    |> Commando.with_switch(:data_path, :string, "Data path", alias: :d,
-                            default: Application.get_env(:postnord, :data_path))
   end
 
   def parse_input(args) do

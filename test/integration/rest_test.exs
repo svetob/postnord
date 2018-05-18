@@ -10,12 +10,14 @@ defmodule Postnord.Test.Integration.REST do
     assert Poison.decode!(body)["status"] == "ok"
   end
 
-  test "can write and get message" do
+  test "can write, read and confirm a message" do
     resp_post = HTTPotion.post(uri("/queue/q/message/"), [body: "Hello REST!"])
     assert resp_post.status_code == 201
 
     resp_get = HTTPotion.get(uri("/queue/q/message/"))
     assert resp_get.status_code == 200
+
+    # TODO Confirm
   end
 
   test "204 when attempting to get message from empty queue" do
@@ -26,6 +28,18 @@ defmodule Postnord.Test.Integration.REST do
   test "405 for unsupported operations" do
     resp_put = HTTPotion.put(uri("/queue/q/message/"), [body: "Hello REST!"])
     assert resp_put.status_code == 405
+  end
+
+  test "can flush queue" do
+
+  end
+
+  test "can replicate a message" do
+
+  end
+
+  test "can tombstone a message" do
+
   end
 
   def uri(path) do

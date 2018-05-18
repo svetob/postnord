@@ -4,15 +4,15 @@ defmodule TestUtil.Cluster do
   @moduledoc """
   Utilities for creating and managing a multi-node test cluster.
 
-  [ ] The nodes run on localhost and communicate via GRPC
+  [ ] The nodes run on localhost and communicate via HTTP
   [ ] Data is stored under /test/data
   [ ] Test data is cleaned up after termination
   """
 
   @doc """
-  Creates a local cluster with one node for each gRPC port given as argument.
+  Creates a local cluster with one node for each HTTP port given as argument.
   """
-  def create(ports \\ [2021, 2022, 2023]) do
+  def create(ports \\ [2011, 2012, 2013]) do
     Logger.debug "#{__MODULE__} Launching test cluster"
     enable_node_boot()
 
@@ -33,9 +33,9 @@ defmodule TestUtil.Cluster do
   end
 
   defp spawn_node(all_nodes, {id, port}) do
-    Logger.debug "#{__MODULE__} Starting slave #{id} with gRPC port #{port}"
+    Logger.debug "#{__MODULE__} Starting slave #{id} with HTTP port #{port}"
     {:ok, node} = :slave.start('127.0.0.1', String.to_atom("node#{port}"), slave_args())
-    
+
     add_code_paths(node)
     transfer_configuration(node)
     apply_new_configurations(all_nodes, node, id, port)
@@ -85,15 +85,14 @@ defmodule TestUtil.Cluster do
     end
   end
 
-  defp apply_new_configurations(all_nodes, node, id, grpc_port) do
+  defp apply_new_configurations(all_nodes, node, id, http_port) do
     replica_nodes = all_nodes |> Enum.map(fn {id, port} ->
       {id, "localhost:#{port}"}
     end)
 
     envs = [
       [:postnord, :data_path, "test/data/cluster/#{id}/"],
-      [:postnord, :port, grpc_port + 10],
-      [:postnord, :grpc_port, grpc_port],
+      [:postnord, :port, http_port + 10],
       [:postnord, :replica_nodes, replica_nodes],
     ]
 

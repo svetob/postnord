@@ -1,7 +1,7 @@
 defmodule Postnord.Cluster.State do
 
   @moduledoc """
-  Locally shared RAFT Cluster state.
+  Locally shared to-be-RAFTed Cluster state.
   """
 
   defstruct hosts: %{},
@@ -22,9 +22,9 @@ defmodule Postnord.Cluster.State do
     Agent.get(__MODULE__, fn state -> state end)
   end
 
-  def add_host(host_id, grpc_uri) do
+  def add_host(host_id, host_uri) do
     Agent.update(__MODULE__, fn state ->
-      %__MODULE__{state | hosts: state.hosts |> Map.put(host_id, grpc_uri)}
+      %__MODULE__{state | hosts: state.hosts |> Map.put(host_id, host_uri)}
     end)
   end
 

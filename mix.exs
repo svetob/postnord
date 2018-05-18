@@ -32,15 +32,10 @@ defmodule Postnord.Mixfile do
       {:httpoison, "~> 0.11.1"},
       {:poison, "~> 3.1"},
 
-      # gRPC and Protobuf
-      {:grpc, github: "tony612/grpc-elixir"},
-
       # CLI
       {:commando, "~> 0.1"},
 
       # HTTP REST API
-      {:cowboy, git: "https://github.com/tony612/cowboy.git", branch: "my-fix", override: true},
-      {:plug, "~> 1.1"},
 
       # Logging
       {:lager_logger, "~> 1.0"},

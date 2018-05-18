@@ -11,7 +11,7 @@ defmodule Postnord.Perftest do
   Launch Postnord application
   """
   def launch do
-    Postnord.main(["--disable-grpc-server", "--disable-http-server"])
+    Postnord.main(["--disable-http-server"])
   end
 
   @doc """

@@ -15,24 +15,9 @@ Launch postnord server:
 $ mix run --no-halt -e "Postnord.main()"
 ```
 
-Publish and read a message via gRPC:
-```elixir
-$ iex -S mix
-
-# Open gRPC connection
-{:ok, chan} = GRPC.Stub.connect("localhost:2021")
-
-# Write a message
-write_request = Postnord.GRPC.WriteRequest.new(message: "Written by GRPC!")
-write_reply = Postnord.GRPC.Node.Stub.write(chan, write_request)
-
-# Read message
-read_request = Postnord.GRPC.ReadRequest.new()
-read_reply = Postnord.GRPC.Node.Stub.read(chan, read_request)
-
-# Confirm message
-confirm_request = Postnord.GRPC.ConfirmRequest.new(confirmation: :ACCEPT, id: read_reply.id)
-confirm_reply = Postnord.GRPC.Node.Stub.confirm(chan, confirm_request)
+Publish and read a message via HTTP:
+```
+TODO
 ```
 
 ## performance test
@@ -66,9 +51,9 @@ When you don't need:
 
 ## design goals
 
-- run excellently on most machines with default configuration
+- run excellently on all modern machines with default configuration
+- prefer simplicity over features
 - an intuitive, easy-to-use API
 - never lose data
 - abstract internals away from user
 - stable and reliable at any scale
-- prefer simplicity over features
