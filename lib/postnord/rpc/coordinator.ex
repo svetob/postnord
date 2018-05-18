@@ -16,31 +16,39 @@ defmodule Postnord.RPC.Coordinator do
   def init(_args) do
     cluster_state = ClusterState.get()
     my_id = cluster_state.my_id
-    senders = cluster_state.hosts |> Enum.map(fn host -> rpc_sender(host, my_id) end)
 
-    children = senders
-    |> Enum.map(fn {_, _, child} -> child end)
-    |> Enum.filter(fn child -> child != nil end)
-    Supervisor.start_link(children, [strategy: :one_for_one])
+    clients_info = Enum.map(cluster_state.hosts, fn host ->
+      rpc_client_info(host, my_id)
+    end)
 
-    sender_info = senders |> Enum.map(fn {module, name, _} -> {module, name} end)
-    {:ok, sender_info}
+    children = cluster_state.hosts
+      |> Enum.map(fn host -> rpc_client_worker(host, my_id) end)
+      |> Enum.filter(fn child -> child != nil end)
+
+    {:ok, _pid} = Supervisor.start_link(children, [strategy: :one_for_one])
+
+    {:ok, clients_info}
   end
 
-  defp rpc_sender({host_id, _host_path}, my_id) when host_id == my_id do
-    module = Postnord.RPC.Client.Local
-    name = rpc_sender_name("local")
-    {module, name, nil}
+  defp rpc_client_info({host_id, _host_path}, my_id) when host_id == my_id do
+    {Postnord.RPC.Client.Local, rpc_client_name("local")}
+  end
+  defp rpc_client_info({host_id, _host_path}, my_id) do
+    {Postnord.RPC.Client.Rest, rpc_client_name(host_id)}
   end
 
-  defp rpc_sender({host_id, host_path}, my_id) when host_id != my_id do
-    module = Postnord.RPC.Client.HTTP
-    name = rpc_sender_name(host_id)
-    child = worker(Postnord.RPC.Client.HTTP, [host_path, [name: name]], [id: name])
-    {module, name, child}
+  defp rpc_client_worker({host_id, _host_path}, my_id) when host_id == my_id do
+    nil
+  end
+  defp rpc_client_worker({host_id, host_path}, my_id) do
+    name = rpc_client_name(host_id)
+    %{
+      id: name,
+      start: {Postnord.RPC.Client.Rest, :start_link, [host_path, [name: name]]}
+    }
   end
 
-  defp rpc_sender_name(host_id) do
+  defp rpc_client_name(host_id) do
     String.to_atom("rpc_sender_#{host_id}")
   end
 

@@ -39,6 +39,7 @@ defmodule Postnord do
     if disabled do
       []
     else
+      Logger.info("HTTP server starting at port #{port}")
       [Plug.Adapters.Cowboy2.child_spec(scheme: :http, plug: Postnord.Rest.Router, options: [port: port])]
     end
   end

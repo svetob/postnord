@@ -19,7 +19,6 @@ defmodule Postnord.Test.IndexLog do
                    flush_timeout: @flush_timeout}
 
     {:ok, index_log} = IndexLog.start_link(state)
-    IO.puts @path_index_log
     {:ok, file} = File.open(@path_index_log)
 
     on_exit fn ->

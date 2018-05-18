@@ -40,7 +40,7 @@ defmodule Postnord.IndexLog do
     |> File.mkdir_p()
 
     # Open output file
-    Logger.info "Opening: #{Path.absname(state.path)}"
+    Logger.debug "Opening: #{Path.absname(state.path)}"
     file = File.open!(state.path, @file_opts)
 
     {:ok, %State{state | iodevice: file}}

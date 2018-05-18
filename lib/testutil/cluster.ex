@@ -13,7 +13,7 @@ defmodule TestUtil.Cluster do
   Creates a local cluster with one node for each HTTP port given as argument.
   """
   def create(ports \\ [2011, 2012, 2013]) do
-    Logger.debug "#{__MODULE__} Launching test cluster"
+    Logger.info "#{__MODULE__} Launching test cluster"
     enable_node_boot()
 
     nodes = ports
@@ -33,8 +33,8 @@ defmodule TestUtil.Cluster do
   end
 
   defp spawn_node(all_nodes, {id, port}) do
-    Logger.debug "#{__MODULE__} Starting slave #{id} with HTTP port #{port}"
     {:ok, node} = :slave.start('127.0.0.1', String.to_atom("node#{port}"), slave_args())
+    Logger.debug "#{__MODULE__} Starting slave #{id} with node name #{inspect node}"
 
     add_code_paths(node)
     transfer_configuration(node)
@@ -92,8 +92,9 @@ defmodule TestUtil.Cluster do
 
     envs = [
       [:postnord, :data_path, "test/data/cluster/#{id}/"],
-      [:postnord, :port, http_port + 10],
-      [:postnord, :replica_nodes, replica_nodes],
+      [:postnord, :port, http_port],
+      [:postnord, :node_id, id],
+      [:postnord, :replica_nodes, replica_nodes]
     ]
 
     envs |> Enum.each(fn env ->
@@ -110,6 +111,19 @@ defmodule TestUtil.Cluster do
   end
 
   defp start_postnord(node) do
-    :ok == :rpc.block_call(node, Postnord, :main, [])
+    :ok == :rpc.cast(node, TestUtil.Cluster, :cluster_node_start, [])
+  end
+
+  @doc """
+  Start a node and prevent process from closing
+  """
+  def cluster_node_start do
+    Postnord.main([])
+    keepalive()
+  end
+
+  defp keepalive do
+    Process.sleep(10_000)
+    keepalive()
   end
 end
