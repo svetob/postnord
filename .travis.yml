@@ -4,6 +4,9 @@ elixir:
 otp_release:
   - 20.3
 
+before_script:
+  - epmd -daemon
+
 script:
   - mix credo -a
   - mix test
