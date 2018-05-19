@@ -35,12 +35,13 @@ defmodule Postnord.IndexLog do
 
   def init(state) do
     # Create output directory
-    :ok = state.path
-    |> Path.dirname()
-    |> File.mkdir_p()
+    :ok =
+      state.path
+      |> Path.dirname()
+      |> File.mkdir_p()
 
     # Open output file
-    Logger.debug fn -> "Opening: #{Path.absname(state.path)}" end
+    Logger.debug(fn -> "Opening: #{Path.absname(state.path)}" end)
     file = File.open!(state.path, @file_opts)
 
     {:ok, %State{state | iodevice: file}}
@@ -73,29 +74,38 @@ defmodule Postnord.IndexLog do
   # Buffer incoming data for the next write, and add the `from` process to the
   # callbacks list.
   defp buffer(state, from, entry) do
-    %State{state | callbacks: [from | state.callbacks],
-                   buffer: state.buffer <> Entry.as_bytes(entry)}
+    %State{
+      state
+      | callbacks: [from | state.callbacks],
+        buffer: state.buffer <> Entry.as_bytes(entry)
+    }
   end
 
   # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
-    spawn fn ->
-      Logger.debug fn -> "#{__MODULE__} Flushing data to #{state.path}" end
+    spawn(fn ->
+      Logger.debug(fn -> "#{__MODULE__} Flushing data to #{state.path}" end)
+
       state.iodevice
       |> IO.binwrite(state.buffer)
       |> send_callbacks(state.callbacks)
-    end
+    end)
+
     %State{state | buffer: <<>>, callbacks: []}
   end
 
   defp send_callbacks(:ok, callbacks) do
-    callbacks |> Enum.each(fn from ->
+    callbacks
+    |> Enum.each(fn from ->
       GenServer.reply(from, :ok)
     end)
   end
+
   defp send_callbacks({:error, reason}, callbacks) do
-    Logger.error "#{__MODULE__} Failed writing to index log: #{inspect reason}"
-    callbacks |> Enum.each(fn from ->
+    Logger.error("#{__MODULE__} Failed writing to index log: #{inspect(reason)}")
+
+    callbacks
+    |> Enum.each(fn from ->
       GenServer.reply(from, {:error, reason})
     end)
   end

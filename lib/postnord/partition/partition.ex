@@ -26,12 +26,13 @@ defmodule Postnord.Partition do
       worker(PartitionConsumer, [partition_reader_state(path), [name: PartitionConsumer]])
     ]
 
-    Supervisor.start_link(children, [strategy: :one_for_one])
+    Supervisor.start_link(children, strategy: :one_for_one)
     {:ok, nil}
   end
 
   defp message_log_state(path) do
     env = Application.get_env(:postnord, MessageLog, [])
+
     %Postnord.MessageLog.State{
       buffer_size: env |> Keyword.get(:buffer_size),
       flush_timeout: env |> Keyword.get(:flush_timeout),
@@ -41,6 +42,7 @@ defmodule Postnord.Partition do
 
   defp index_log_state(path) do
     env = Application.get_env(:postnord, IndexLog, [])
+
     %Postnord.IndexLog.State{
       buffer_size: env |> Keyword.get(:buffer_size),
       flush_timeout: env |> Keyword.get(:flush_timeout),
@@ -61,16 +63,17 @@ defmodule Postnord.Partition do
       GenServer.call(pid, {:replicate, id, timestamp, bytes}, timeout)
     catch
       :exit, reason ->
-        Logger.error "Replication failed: #{inspect reason}"
+        Logger.error("Replication failed: #{inspect(reason)}")
         {:error, reason}
     end
   end
 
   def handle_call({:replicate, id, timestamp, bytes}, from, nil) do
-    spawn fn ->
+    spawn(fn ->
       write_to_logs(id, timestamp, bytes)
       GenServer.reply(from, :ok)
-    end
+    end)
+
     {:noreply, nil}
   end
 

@@ -23,6 +23,7 @@ defmodule Postnord.Rest.RPC do
 
   def tombstone(_queue, id) do
     {:ok, id} = Id.message_id_decode(id)
+
     case PartitionConsumer.accept(PartitionConsumer, id) do
       :ok ->
         {:ok, 202, "OK"}

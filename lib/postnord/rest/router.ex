@@ -3,8 +3,8 @@ defmodule Postnord.Rest.Router do
 
   alias Postnord.Rest.{Status, Queue, RPC}
 
-  plug :match
-  plug :dispatch
+  plug(:match)
+  plug(:dispatch)
 
   get "_status" do
     resp = Status.status()
@@ -72,20 +72,25 @@ defmodule Postnord.Rest.Router do
   defp respond({:ok, status, body}, conn) do
     send_resp(conn, status, body)
   end
+
   defp respond({:ok, status, body, headers}, conn) do
-    conn = Enum.reduce(headers, conn, fn {key, value}, conn ->
-      put_resp_header(conn, key, value)
-    end)
+    conn =
+      Enum.reduce(headers, conn, fn {key, value}, conn ->
+        put_resp_header(conn, key, value)
+      end)
+
     send_resp(conn, status, body)
   end
+
   defp respond({:error, reason}, conn) when is_binary(reason) do
     send_resp(conn, 500, reason)
   end
+
   defp respond({:error, reason}, conn) do
     send_resp(conn, 500, inspect(reason))
   end
 
-  @spec read_full_body(Plug.Conn.t) :: {:ok, binary, Plug.Conn.t} | {:error, term}
+  @spec read_full_body(Plug.Conn.t()) :: {:ok, binary, Plug.Conn.t()} | {:error, term}
   defp read_full_body(conn, body \\ <<>>) do
     case read_body(conn) do
       {:ok, binary, conn_next} ->

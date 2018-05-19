@@ -49,7 +49,7 @@ defmodule Postnord.MessageLog do
     filepath = Path.join(state.path, @file_name)
     iodevice = File.open!(filepath, @file_opts)
     iostat = File.stat!(filepath)
-    Logger.debug fn -> "Appending to: #{Path.absname(filepath)}" end
+    Logger.debug(fn -> "Appending to: #{Path.absname(filepath)}" end)
 
     %State{state | iodevice: iodevice, offset: iostat.size}
   end
@@ -79,35 +79,44 @@ defmodule Postnord.MessageLog do
   end
 
   def terminate(reason, _state) do
-    Logger.debug fn -> "Message log terminating: #{inspect reason}" end
+    Logger.debug(fn -> "Message log terminating: #{inspect(reason)}" end)
   end
 
   # Buffer bytes for next write, add `from` process to callbacks list.
   defp buffer(state, from, bytes) do
     len = byte_size(bytes)
-    %State{state | offset: state.offset + len,
-                   buffer: state.buffer <> bytes,
-                   callbacks: [{from, state.offset, len} | state.callbacks]}
+
+    %State{
+      state
+      | offset: state.offset + len,
+        buffer: state.buffer <> bytes,
+        callbacks: [{from, state.offset, len} | state.callbacks]
+    }
   end
 
   # Persist write buffer to disk, notify all in callbacks list.
   defp flush(state) do
-    spawn fn ->
+    spawn(fn ->
       state.iodevice
       |> :file.write(state.buffer)
       |> send_callbacks(state.callbacks)
-    end
+    end)
+
     %State{state | buffer: <<>>, callbacks: []}
   end
 
   defp send_callbacks(:ok, callbacks) do
-    callbacks |> Enum.each(fn {from, offset, len} ->
+    callbacks
+    |> Enum.each(fn {from, offset, len} ->
       GenServer.reply(from, {:ok, offset, len})
     end)
   end
+
   defp send_callbacks({:error, reason}, callbacks) do
-    Logger.error "Failed writing to message log: #{inspect reason}"
-    callbacks |> Enum.each(fn {from, _offset, _len} ->
+    Logger.error("Failed writing to message log: #{inspect(reason)}")
+
+    callbacks
+    |> Enum.each(fn {from, _offset, _len} ->
       GenServer.reply(from, {:error, reason})
     end)
   end

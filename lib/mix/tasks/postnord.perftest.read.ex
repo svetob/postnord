@@ -20,9 +20,12 @@ defmodule Mix.Tasks.Postnord.Perftest.Read do
   """
 
   def run(args) do
-    {opts, _, _} = OptionParser.parse args,
+    {opts, _, _} =
+      OptionParser.parse(
+        args,
         switches: [entries: :integer, readers: :integer],
         aliases: [e: :entries, r: :readers]
+      )
 
     launch()
 

@@ -20,22 +20,19 @@ defmodule Postnord.Test.MessageLog do
   @path_message_log @path |> Path.join("message.log")
 
   setup do
-    state = %State{path: @path,
-                   flush_timeout: @flush_timeout,
-                   buffer_size: @buffer_size}
+    state = %State{path: @path, flush_timeout: @flush_timeout, buffer_size: @buffer_size}
 
     {:ok, message_log} = MessageLog.start_link(state)
     {:ok, file} = File.open(@path_message_log, [:binary, :read])
 
-    on_exit fn ->
+    on_exit(fn ->
       # Remove output files after each test
       File.rm(@path_message_log)
       File.rmdir(@path)
-    end
+    end)
 
     [pid: message_log, output_file: file]
   end
-
 
   test "Writes message to file", context do
     msg = "Hello World!"
@@ -45,18 +42,17 @@ defmodule Postnord.Test.MessageLog do
     assert log_content(context) == msg
   end
 
-
   test "Returns correct offset, len of writes", context do
     {:ok, 0, 12} = MessageLog.write(context[:pid], "Hello world!")
     {:ok, 12, 10} = MessageLog.write(context[:pid], "Nice suit!")
     {:ok, 22, 15} = MessageLog.write(context[:pid], "Why, thank you!")
   end
 
-
   test "Writes messages in order", context do
     msgs = 1..5 |> Enum.map(fn _ -> RandomBytes.base16(10) end)
 
-    msgs |> Enum.each(fn msg ->
+    msgs
+    |> Enum.each(fn msg ->
       {:ok, _, _} = MessageLog.write(context[:pid], msg)
     end)
 
@@ -67,56 +63,63 @@ defmodule Postnord.Test.MessageLog do
     sample_size = 100
     me = self()
 
-    1..sample_size |> Enum.each(fn n ->
-      spawn_link fn ->
+    1..sample_size
+    |> Enum.each(fn n ->
+      spawn_link(fn ->
         msg = :crypto.strong_rand_bytes(n)
         {:ok, _, n} = MessageLog.write(context[:pid], msg)
-        send me, {:ok, n}
-      end
+        send(me, {:ok, n})
+      end)
     end)
 
-    1..sample_size |> Enum.each(fn n ->
+    1..sample_size
+    |> Enum.each(fn n ->
       assert_receive {:ok, ^n}, 2000
     end)
   end
 
-
   test "Buffers writes until flush_timeout", context do
     me = self()
-    spawn_link fn ->
+
+    spawn_link(fn ->
       {:ok, _, _} = MessageLog.write(context[:pid], "Foo")
-      send me, :write_ok
-    end
+      send(me, :write_ok)
+    end)
 
     refute_receive :write_ok, @flush_timeout - 1
     assert_receive :write_ok, 5
   end
 
-
   test "Buffers writes until buffer_size", context do
     # Send small message
-    {time_a, _} = :timer.tc fn ->
-      {:ok, _, _} = MessageLog.write(context[:pid], "A")
-    end
+    {time_a, _} =
+      :timer.tc(fn ->
+        {:ok, _, _} = MessageLog.write(context[:pid], "A")
+      end)
+
     # Send small message
-    {time_b, _} = :timer.tc fn ->
-      {:ok, _, _} = MessageLog.write(context[:pid], "B")
-    end
+    {time_b, _} =
+      :timer.tc(fn ->
+        {:ok, _, _} = MessageLog.write(context[:pid], "B")
+      end)
+
     # Send message of size buffer_size
-    {time_large, _} = :timer.tc fn ->
-      {:ok, _, _} = MessageLog.write(context[:pid], :crypto.strong_rand_bytes(@buffer_size))
-    end
+    {time_large, _} =
+      :timer.tc(fn ->
+        {:ok, _, _} = MessageLog.write(context[:pid], :crypto.strong_rand_bytes(@buffer_size))
+      end)
+
     # Send small message
-    {time_c, _} = :timer.tc fn ->
-      {:ok, _, _} = MessageLog.write(context[:pid], "C")
-    end
+    {time_c, _} =
+      :timer.tc(fn ->
+        {:ok, _, _} = MessageLog.write(context[:pid], "C")
+      end)
 
     assert time_a >= @flush_timeout_us
     assert time_b >= @flush_timeout_us
     assert time_c >= @flush_timeout_us
     assert time_large < @flush_timeout_us
   end
-
 
   defp log_content(context) do
     IO.read(context[:output_file], :all)

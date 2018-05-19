@@ -35,65 +35,67 @@ defmodule Postnord.RPC.Client.Rest do
   end
 
   def handle_call({:replicate, _partition, id, timestamp, message}, from, node_uri) do
-    spawn_link fn ->
-        id_encoded = Id.message_id_encode(id)
-        uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/timestamp/#{timestamp}/replicate"
+    spawn_link(fn ->
+      id_encoded = Id.message_id_encode(id)
+      uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/timestamp/#{timestamp}/replicate"
 
-        Logger.debug fn -> "#{__MODULE__} Sending replicate request to #{uri}" end
+      Logger.debug(fn -> "#{__MODULE__} Sending replicate request to #{uri}" end)
 
-        case HTTPoison.post(uri, message, @http_headers, @http_options) do
-          {:ok, %HTTPoison.Response{status_code: 201}} ->
-            GenServer.reply(from, :ok)
+      case HTTPoison.post(uri, message, @http_headers, @http_options) do
+        {:ok, %HTTPoison.Response{status_code: 201}} ->
+          GenServer.reply(from, :ok)
 
-          {:ok, %HTTPoison.Response{status_code: status_code}} ->
-            GenServer.reply(from, {:error, "Unexpected status code on replication: #{status_code}"})
+        {:ok, %HTTPoison.Response{status_code: status_code}} ->
+          GenServer.reply(from, {:error, "Unexpected status code on replication: #{status_code}"})
 
-          {:error, %HTTPoison.Error{reason: reason}} ->
-            GenServer.reply(from, {:error, reason})
-        end
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          GenServer.reply(from, {:error, reason})
       end
-      {:noreply, node_uri}
+    end)
+
+    {:noreply, node_uri}
   end
 
   def handle_call({:tombstone, _partition, id}, from, node_uri) do
-    spawn_link fn ->
-        id_encoded = Id.message_id_encode(id)
-        uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/tombstone"
+    spawn_link(fn ->
+      id_encoded = Id.message_id_encode(id)
+      uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/tombstone"
 
-        Logger.debug fn -> "#{__MODULE__} Sending tombstone request to #{uri}" end
+      Logger.debug(fn -> "#{__MODULE__} Sending tombstone request to #{uri}" end)
 
-        case HTTPoison.post(uri, "", @http_headers, @http_options) do
-          {:ok, %HTTPoison.Response{status_code: 202}} ->
-            GenServer.reply(from, :ok)
+      case HTTPoison.post(uri, "", @http_headers, @http_options) do
+        {:ok, %HTTPoison.Response{status_code: 202}} ->
+          GenServer.reply(from, :ok)
 
-          {:ok, %HTTPoison.Response{status_code: status_code}} ->
-            GenServer.reply(from, {:error, "Unexpected status code on tombstone: #{status_code}"})
+        {:ok, %HTTPoison.Response{status_code: status_code}} ->
+          GenServer.reply(from, {:error, "Unexpected status code on tombstone: #{status_code}"})
 
-          {:error, %HTTPoison.Error{reason: reason}} ->
-            GenServer.reply(from, {:error, reason})
-        end
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          GenServer.reply(from, {:error, reason})
       end
-      {:noreply, node_uri}
+    end)
+
+    {:noreply, node_uri}
   end
 
   def handle_call({:flush, queue}, from, node_uri) do
-    spawn_link fn ->
-        uri = node_uri <> "/rpc/queue/#{queue}/flush"
+    spawn_link(fn ->
+      uri = node_uri <> "/rpc/queue/#{queue}/flush"
 
-        Logger.debug fn -> "#{__MODULE__} Sending flush request to #{uri}" end
+      Logger.debug(fn -> "#{__MODULE__} Sending flush request to #{uri}" end)
 
-        case HTTPoison.post(uri, "", @http_headers, @http_options) do
-          {:ok, %HTTPoison.Response{status_code: 202}} ->
-            GenServer.reply(from, :ok)
+      case HTTPoison.post(uri, "", @http_headers, @http_options) do
+        {:ok, %HTTPoison.Response{status_code: 202}} ->
+          GenServer.reply(from, :ok)
 
-          {:ok, %HTTPoison.Response{status_code: status_code}} ->
-            GenServer.reply(from, {:error, "Unexpected status code on flush: #{status_code}"})
+        {:ok, %HTTPoison.Response{status_code: status_code}} ->
+          GenServer.reply(from, {:error, "Unexpected status code on flush: #{status_code}"})
 
-          {:error, %HTTPoison.Error{reason: reason}} ->
-            GenServer.reply(from, {:error, reason})
-        end
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          GenServer.reply(from, {:error, reason})
       end
-      {:noreply, node_uri}
-  end
+    end)
 
+    {:noreply, node_uri}
+  end
 end

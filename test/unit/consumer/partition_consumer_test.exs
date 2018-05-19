@@ -25,12 +25,12 @@ defmodule Postnord.Test.Consumer.Partition do
     # Create output directory
     :ok = File.mkdir_p(@path <> "/")
 
-    on_exit fn ->
+    on_exit(fn ->
       # Remove output files after each test
       File.rm(@path_message_log)
       File.rm(@path_index_log)
       File.rmdir(@path)
-    end
+    end)
 
     [pid: pid]
   end
@@ -84,7 +84,7 @@ defmodule Postnord.Test.Consumer.Partition do
 
   test "Returns :empty if data for entry not written yet", context do
     msgs = ["foo"]
-    entries = entries_for ["foo", "bar"]
+    entries = entries_for(["foo", "bar"])
     write_data(msgs, entries)
 
     {:ok, id, "foo"} = PartitionConsumer.read(context[:pid])
@@ -126,34 +126,41 @@ defmodule Postnord.Test.Consumer.Partition do
     assert {:error, :enoent} == PartitionConsumer.read(context[:pid])
   end
 
-
   defp entries_for(messages) do
-    Enum.reduce(messages, [], fn (m, acc) ->
+    Enum.reduce(messages, [], fn m, acc ->
       id = Postnord.Id.message_id()
+
       case acc do
         [] ->
-          [%Entry{id: id,
-                  offset: 0,
-                  len: byte_size(m),
-                  timestamp: Postnord.now()}]
+          [%Entry{id: id, offset: 0, len: byte_size(m), timestamp: Postnord.now()}]
+
         _ ->
           prev = List.last(acc)
-          acc ++ [%Entry{id: id,
-                         offset: prev.offset + prev.len,
-                         len: byte_size(m),
-                         timestamp: Postnord.now()}]
+
+          acc ++
+            [
+              %Entry{
+                id: id,
+                offset: prev.offset + prev.len,
+                len: byte_size(m),
+                timestamp: Postnord.now()
+              }
+            ]
       end
     end)
   end
 
   defp write_data(message_log, index_log) do
-    msgbytes = message_log
-      |> Enum.join
-      |> :erlang.iolist_to_binary
-    indexbytes = index_log
+    msgbytes =
+      message_log
+      |> Enum.join()
+      |> :erlang.iolist_to_binary()
+
+    indexbytes =
+      index_log
       |> Enum.map(&Entry.as_bytes/1)
-      |> Enum.join
-      |> :erlang.iolist_to_binary
+      |> Enum.join()
+      |> :erlang.iolist_to_binary()
 
     File.write(@path_message_log, msgbytes)
     File.write(@path_index_log, indexbytes)

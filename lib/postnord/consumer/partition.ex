@@ -54,8 +54,12 @@ defmodule Postnord.Consumer.PartitionConsumer do
   end
 
   def init(state) do
-    {:ok, %State{state | messagelog_path: Path.join(state.path, "message.log"),
-                         indexlog_path: Path.join(state.path, "index.log")}}
+    {:ok,
+     %State{
+       state
+       | messagelog_path: Path.join(state.path, "message.log"),
+         indexlog_path: Path.join(state.path, "index.log")
+     }}
   end
 
   @spec read(pid(), integer) :: {:ok, iolist(), iolist()} | :empty | {:error, any()}
@@ -83,6 +87,7 @@ defmodule Postnord.Consumer.PartitionConsumer do
 
   def handle_call({:accept, id}, _from, state) do
     tombstone = %Tombstone{id: id}
+
     if tombstoned?(state, tombstone) do
       {:reply, :noop, state}
     else

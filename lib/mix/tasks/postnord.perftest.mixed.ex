@@ -3,7 +3,6 @@ defmodule Mix.Tasks.Postnord.Perftest.Mixed do
   import Postnord.Perftest
   use Mix.Task
 
-
   @shortdoc "Index performance test"
 
   @moduledoc """
@@ -23,29 +22,33 @@ defmodule Mix.Tasks.Postnord.Perftest.Mixed do
   """
 
   def run(args) do
-    {opts, _, _} = OptionParser.parse args,
+    {opts, _, _} =
+      OptionParser.parse(
+        args,
         switches: [msgbytes: :integer, writers: :integer, entries: :integer, readers: :integer],
         aliases: [m: :msgbytes, w: :writers, e: :entries, r: :readers]
+      )
 
     launch()
 
     me = self()
-    spawn_link fn ->
-      write_test(
-          opts[:msgbytes] || 100 * 1024,
-          opts[:writers] || 100,
-          opts[:entries] || 10_000)
-      send me, :ok_write
+
+    spawn_link(fn ->
+      write_test(opts[:msgbytes] || 100 * 1024, opts[:writers] || 100, opts[:entries] || 10_000)
+      send(me, :ok_write)
+    end)
+
+    spawn_link(fn ->
+      read_test(opts[:readers] || 1, opts[:entries] || 10_000)
+      send(me, :ok_read)
+    end)
+
+    receive do
+      :ok_write -> :ok
     end
 
-    spawn_link fn ->
-      read_test(
-          opts[:readers] || 1,
-          opts[:entries] || 10_000)
-      send me, :ok_read
+    receive do
+      :ok_read -> :ok
     end
-
-    receive do :ok_write -> :ok end
-    receive do :ok_read  -> :ok end
   end
 end

@@ -6,9 +6,7 @@ defmodule Postnord.Consumer.PartitionConsumer.Holds do
   Handles requests for holds on messages.
   """
 
-  @spec request_hold(String.t, String.t, integer()) :: boolean()
+  @spec request_hold(String.t(), String.t(), integer()) :: boolean()
   def request_hold(host, id, time \\ 5_000) do
-
   end
-
 end

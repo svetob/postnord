@@ -1,5 +1,4 @@
 defmodule Postnord.Cluster.State do
-
   @moduledoc """
   Locally shared to-be-RAFTed Cluster state.
   """
@@ -27,5 +26,4 @@ defmodule Postnord.Cluster.State do
       %__MODULE__{state | hosts: state.hosts |> Map.put(host_id, host_uri)}
     end)
   end
-
 end

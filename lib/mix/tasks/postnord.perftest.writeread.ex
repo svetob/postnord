@@ -22,19 +22,17 @@ defmodule Mix.Tasks.Postnord.Perftest.WriteRead do
   """
 
   def run(args) do
-    {opts, _, _} = OptionParser.parse args,
+    {opts, _, _} =
+      OptionParser.parse(
+        args,
         switches: [msgbytes: :integer, writers: :integer, entries: :integer, readers: :integer],
         aliases: [m: :msgbytes, w: :writers, e: :entries, r: :readers]
+      )
 
     launch()
 
-    write_test(
-        opts[:msgbytes] || 100 * 1024,
-        opts[:writers] || 100,
-        opts[:entries] || 10_000)
+    write_test(opts[:msgbytes] || 100 * 1024, opts[:writers] || 100, opts[:entries] || 10_000)
 
-    read_test(
-        opts[:readers] || 1,
-        opts[:entries] || 10_000)
+    read_test(opts[:readers] || 1, opts[:entries] || 10_000)
   end
 end

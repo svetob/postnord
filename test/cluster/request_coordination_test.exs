@@ -5,7 +5,6 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
 
   alias TestUtil.Rest
 
-
   @moduledoc """
   Cluster tests which verify requests are correctly coordinated
   accross multiple nodes.
@@ -17,9 +16,9 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
     cluster = TestUtil.Cluster.create(@ports)
     Process.sleep(1_000)
 
-    on_exit fn ->
+    on_exit(fn ->
       TestUtil.Cluster.teardown(cluster)
-    end
+    end)
 
     uris = @ports |> Enum.map(fn p -> "http://localhost:#{p}" end)
 
@@ -32,12 +31,11 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
   end
 
   def flush_cluster(uris) do
-    Logger.info "Flushing cluster"
-    uri = hd uris
+    Logger.info("Flushing cluster")
+    uri = hd(uris)
     resp_flush = Rest.flush_queue(uri)
     assert resp_flush.status_code == 202
   end
-
 
   test "can write to one node then read from another", context do
     [uri_a, uri_b, _] = context[:uris]

@@ -29,12 +29,13 @@ defmodule Postnord.TombstoneLog do
 
   def init(state) do
     # Create output directory
-    :ok = state.path
-    |> Path.dirname()
-    |> File.mkdir_p()
+    :ok =
+      state.path
+      |> Path.dirname()
+      |> File.mkdir_p()
 
     # Open output file
-    Logger.debug fn -> "Opening: #{Path.absname(state.path)}" end
+    Logger.debug(fn -> "Opening: #{Path.absname(state.path)}" end)
     file = File.open!(state.path, @file_opts)
 
     {:ok, %State{state | iodevice: file}}
@@ -67,25 +68,32 @@ defmodule Postnord.TombstoneLog do
   # Buffer incoming data for the next write, and add the `from` process to the
   # callbacks list.
   defp buffer(state, from, tombstone, metadata) do
-    %State{state | callbacks: [{from, metadata} | state.callbacks],
-                   buffer: state.buffer <> Tombstone.as_bytes(tombstone)}
+    %State{
+      state
+      | callbacks: [{from, metadata} | state.callbacks],
+        buffer: state.buffer <> Tombstone.as_bytes(tombstone)
+    }
   end
 
   # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
-    spawn fn ->
+    spawn(fn ->
       case IO.binwrite(state.iodevice, state.buffer) do
-        :ok -> send_callbacks(state.callbacks)
+        :ok ->
+          send_callbacks(state.callbacks)
+
         {:error, reason} ->
           # TODO Handle error when persisting
-          Logger.error("Failed writing to tombstone log: #{inspect reason}")
+          Logger.error("Failed writing to tombstone log: #{inspect(reason)}")
       end
-    end
+    end)
+
     %State{state | buffer: <<>>, callbacks: []}
   end
 
   defp send_callbacks(callbacks) do
-    callbacks |> Enum.each(fn {from, metadata} ->
+    callbacks
+    |> Enum.each(fn {from, metadata} ->
       GenServer.cast(from, {:write_tombstonelog_ok, metadata})
     end)
   end

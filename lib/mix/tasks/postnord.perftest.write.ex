@@ -21,15 +21,15 @@ defmodule Mix.Tasks.Postnord.Perftest.Write do
   """
 
   def run(args) do
-    {opts, _, _} = OptionParser.parse args,
+    {opts, _, _} =
+      OptionParser.parse(
+        args,
         switches: [msgbytes: :integer, writers: :integer, entries: :integer],
         aliases: [m: :msgbytes, w: :writers, e: :entries]
+      )
 
     launch()
 
-    write_test(
-        opts[:msgbytes] || 100 * 1024,
-        opts[:writers] || 100,
-        opts[:entries] || 10_000)
+    write_test(opts[:msgbytes] || 100 * 1024, opts[:writers] || 100, opts[:entries] || 10_000)
   end
 end

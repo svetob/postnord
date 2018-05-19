@@ -13,11 +13,12 @@ defmodule TestUtil.Cluster do
   Creates a local cluster with one node for each HTTP port given as argument.
   """
   def create(ports \\ [2011, 2012, 2013]) do
-    Logger.info "#{__MODULE__} Launching test cluster"
+    Logger.info("#{__MODULE__} Launching test cluster")
     enable_node_boot()
 
-    nodes = ports
-    |> Enum.map(fn port -> {Postnord.Id.node_id(), port} end)
+    nodes =
+      ports
+      |> Enum.map(fn port -> {Postnord.Id.node_id(), port} end)
 
     nodes
     |> Enum.map(&Task.async(fn -> spawn_node(nodes, &1) end))
@@ -34,7 +35,7 @@ defmodule TestUtil.Cluster do
 
   defp spawn_node(all_nodes, {id, port}) do
     {:ok, node} = :slave.start('127.0.0.1', String.to_atom("node#{port}"), slave_args())
-    Logger.debug fn -> "#{__MODULE__} Starting slave #{id} with node name #{inspect node}" end
+    Logger.debug(fn -> "#{__MODULE__} Starting slave #{id} with node name #{inspect(node)}" end)
 
     add_code_paths(node)
     transfer_configuration(node)
@@ -78,7 +79,7 @@ defmodule TestUtil.Cluster do
   end
 
   defp transfer_configuration(node) do
-    for {app_name, _, _} <- Application.loaded_applications do
+    for {app_name, _, _} <- Application.loaded_applications() do
       for {key, val} <- Application.get_all_env(app_name) do
         :rpc.block_call(node, Application, :put_env, [app_name, key, val])
       end
@@ -86,9 +87,11 @@ defmodule TestUtil.Cluster do
   end
 
   defp apply_new_configurations(all_nodes, node, id, http_port) do
-    replica_nodes = all_nodes |> Enum.map(fn {id, port} ->
-      {id, "localhost:#{port}"}
-    end)
+    replica_nodes =
+      all_nodes
+      |> Enum.map(fn {id, port} ->
+        {id, "localhost:#{port}"}
+      end)
 
     envs = [
       [:postnord, :data_path, "test/data/cluster/#{id}/"],
@@ -97,7 +100,8 @@ defmodule TestUtil.Cluster do
       [:postnord, :replica_nodes, replica_nodes]
     ]
 
-    envs |> Enum.each(fn env ->
+    envs
+    |> Enum.each(fn env ->
       :rpc.block_call(node, Application, :put_env, env)
     end)
   end
@@ -105,7 +109,8 @@ defmodule TestUtil.Cluster do
   defp ensure_applications_started(node) do
     :rpc.block_call(node, Application, :ensure_all_started, [:mix])
     :rpc.block_call(node, Mix, :env, [Mix.env()])
-    for {app_name, _, _} <- Application.loaded_applications do
+
+    for {app_name, _, _} <- Application.loaded_applications() do
       :rpc.block_call(node, Application, :ensure_all_started, [app_name])
     end
   end

@@ -8,15 +8,15 @@ config :postnord,
   replica_nodes: []
 
 config :postnord, Postnord.IndexLog,
-  buffer_size: (128 * 1024),
+  buffer_size: 128 * 1024,
   flush_timeout: 5
 
 config :postnord, Postnord.MessageLog,
-  buffer_size: (4 * 1024),
+  buffer_size: 4 * 1024,
   flush_timeout: 5
 
 config :logger,
   level: :info,
   compile_time_purge_level: :info
 
-import_config "#{Mix.env}.exs"
+import_config "#{Mix.env()}.exs"
