@@ -40,7 +40,7 @@ defmodule Postnord.IndexLog do
     |> File.mkdir_p()
 
     # Open output file
-    Logger.debug "Opening: #{Path.absname(state.path)}"
+    Logger.debug fn -> "Opening: #{Path.absname(state.path)}" end
     file = File.open!(state.path, @file_opts)
 
     {:ok, %State{state | iodevice: file}}
@@ -80,7 +80,7 @@ defmodule Postnord.IndexLog do
   # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
     spawn fn ->
-      Logger.debug("#{__MODULE__} Flushing data to #{state.path}")
+      Logger.debug fn -> "#{__MODULE__} Flushing data to #{state.path}" end
       state.iodevice
       |> IO.binwrite(state.buffer)
       |> send_callbacks(state.callbacks)
@@ -94,7 +94,7 @@ defmodule Postnord.IndexLog do
     end)
   end
   defp send_callbacks({:error, reason}, callbacks) do
-    Logger.error("#{__MODULE__} Failed writing to index log: #{inspect reason}")
+    Logger.error "#{__MODULE__} Failed writing to index log: #{inspect reason}"
     callbacks |> Enum.each(fn from ->
       GenServer.reply(from, {:error, reason})
     end)

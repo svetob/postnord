@@ -20,19 +20,15 @@
         #
         # You can give explicit globs or simply directories.
         # In the latter case `**/*.{ex,exs}` will be used.
-      #
-        included: ["lib/", "src/", "web/", "apps/"]
+        #
+        included: ["lib/", "src/", "test/", "web/", "apps/"],
+        excluded: [~r"/_build/", ~r"/deps/"]
       },
       #
       # If you create your own checks, you must specify the source files for
       # them here, so they can be loaded by Credo before running the analysis.
       #
       requires: [],
-      #
-      # Credo automatically checks for updates, like e.g. Hex does.
-      # You can disable this behaviour below:
-      #
-      check_for_updates: true,
       #
       # If you want to enforce a style guide and need a more traditional linting
       # experience, you can change `strict` to `true` below:
@@ -52,6 +48,9 @@
       #     {Credo.Check.Design.DuplicatedCode, false}
       #
       checks: [
+        #
+        ## Consistency Checks
+        #
         {Credo.Check.Consistency.ExceptionNames},
         {Credo.Check.Consistency.LineEndings},
         {Credo.Check.Consistency.ParameterPatternMatching},
@@ -59,26 +58,30 @@
         {Credo.Check.Consistency.SpaceInParentheses},
         {Credo.Check.Consistency.TabsOrSpaces},
 
-        # For some checks, like AliasUsage, you can only customize the priority
+        #
+        ## Design Checks
+        #
+        # You can customize the priority of any check
         # Priority values are: `low, normal, high, higher`
         #
         {Credo.Check.Design.AliasUsage, priority: :low},
-
-        # For others you can set parameters
-
+        # For some checks, you can also set other parameters
+        #
         # If you don't want the `setup` and `test` macro calls in ExUnit tests
         # or the `schema` macro in Ecto schemas to trigger DuplicatedCode, just
         # set the `excluded_macros` parameter to `[:schema, :setup, :test]`.
         #
         {Credo.Check.Design.DuplicatedCode, excluded_macros: []},
-
         # You can also customize the exit_status of each check.
         # If you don't want TODO comments to cause `mix credo` to fail, just
         # set this value to 0 (zero).
         #
-        {Credo.Check.Design.TagTODO, exit_status: 0},
+        {Credo.Check.Design.TagTODO, priority: :low, exit_status: 2},
         {Credo.Check.Design.TagFIXME},
 
+        #
+        ## Readability Checks
+        #
         {Credo.Check.Readability.FunctionNames},
         {Credo.Check.Readability.LargeNumbers},
         {Credo.Check.Readability.MaxLineLength, priority: :low, max_length: 80},
@@ -97,6 +100,9 @@
         {Credo.Check.Readability.Semicolons},
         {Credo.Check.Readability.SpaceAfterCommas},
 
+        #
+        ## Refactoring Opportunities
+        #
         {Credo.Check.Refactor.DoubleBooleanNegation},
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.CyclomaticComplexity},
@@ -106,13 +112,18 @@
         {Credo.Check.Refactor.NegatedConditionsInUnless},
         {Credo.Check.Refactor.NegatedConditionsWithElse},
         {Credo.Check.Refactor.Nesting},
-        {Credo.Check.Refactor.PipeChainStart},
+        {Credo.Check.Refactor.PipeChainStart,
+         excluded_argument_types: [:atom, :binary, :fn, :keyword], excluded_functions: []},
         {Credo.Check.Refactor.UnlessWithElse},
 
+        #
+        ## Warnings
+        #
         {Credo.Check.Warning.BoolOperationOnSameValues},
+        {Credo.Check.Warning.ExpensiveEmptyEnumCheck},
         {Credo.Check.Warning.IExPry},
         {Credo.Check.Warning.IoInspect},
-        {Credo.Check.Warning.LazyLogging, false},
+        {Credo.Check.Warning.LazyLogging},
         {Credo.Check.Warning.OperationOnSameValues},
         {Credo.Check.Warning.OperationWithConstantResult},
         {Credo.Check.Warning.UnusedEnumOperation},
@@ -125,22 +136,21 @@
         {Credo.Check.Warning.UnusedTupleOperation},
         {Credo.Check.Warning.RaiseInsideRescue},
 
+        #
         # Controversial and experimental checks (opt-in, just remove `, false`)
         #
-        {Credo.Check.Refactor.ABCSize},
+        {Credo.Check.Refactor.ABCSize, false},
         {Credo.Check.Refactor.AppendSingleItem, false},
         {Credo.Check.Refactor.VariableRebinding, false},
         {Credo.Check.Warning.MapGetUnsafePass, false},
         {Credo.Check.Consistency.MultiAliasImportRequireUse, false},
 
+        #
         # Deprecated checks (these will be deleted after a grace period)
         #
-        {Credo.Check.Readability.Specs, false},
-        {Credo.Check.Warning.NameRedeclarationByAssignment, false},
-        {Credo.Check.Warning.NameRedeclarationByCase, false},
-        {Credo.Check.Warning.NameRedeclarationByDef, false},
-        {Credo.Check.Warning.NameRedeclarationByFn, false},
+        {Credo.Check.Readability.Specs, false}
 
+        #
         # Custom checks can be created using `mix credo.gen.check`.
         #
       ]

@@ -79,7 +79,7 @@ defmodule Postnord.RPC.Coordinator do
     timestamp = Postnord.now(:nanosecond)
 
     spawn_link fn ->
-      Logger.debug "#{__MODULE__} Coordinating write_message request"
+      Logger.debug fn -> "#{__MODULE__} Coordinating write_message request" end
       hosts
       |> Enum.map(fn {module, name} ->
         Task.async(module, :replicate, [name, partition, id, timestamp, message])
@@ -90,7 +90,7 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:read_message, _queue}, from, hosts) do
-    Logger.debug "#{__MODULE__} Coordinating read_message request"
+    Logger.debug fn -> "#{__MODULE__} Coordinating read_message request" end
     spawn_link fn ->
       GenServer.reply(from, PartitionConsumer.read(PartitionConsumer))
     end
@@ -98,7 +98,7 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:confirm_accept, _queue, id}, from, hosts) do
-    Logger.debug "#{__MODULE__} Coordinating accept request"
+    Logger.debug fn -> "#{__MODULE__} Coordinating accept request" end
     partition = nil # TODO Extract partition from public ID
 
     spawn_link fn ->
@@ -112,7 +112,7 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:flush, queue}, from, hosts) do
-    Logger.debug "#{__MODULE__} Coordinating flush request"
+    Logger.debug fn -> "#{__MODULE__} Coordinating flush request" end
     spawn_link fn ->
       hosts
       |> Enum.map(fn {module, name} ->

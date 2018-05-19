@@ -49,7 +49,7 @@ defmodule Postnord.MessageLog do
     filepath = Path.join(state.path, @file_name)
     iodevice = File.open!(filepath, @file_opts)
     iostat = File.stat!(filepath)
-    Logger.debug "Appending to: #{Path.absname(filepath)}"
+    Logger.debug fn -> "Appending to: #{Path.absname(filepath)}" end
 
     %State{state | iodevice: iodevice, offset: iostat.size}
   end
@@ -79,7 +79,7 @@ defmodule Postnord.MessageLog do
   end
 
   def terminate(reason, _state) do
-    Logger.debug "Message log terminating: #{inspect reason}"
+    Logger.debug fn -> "Message log terminating: #{inspect reason}" end
   end
 
   # Buffer bytes for next write, add `from` process to callbacks list.
@@ -106,7 +106,7 @@ defmodule Postnord.MessageLog do
     end)
   end
   defp send_callbacks({:error, reason}, callbacks) do
-    Logger.error("Failed writing to message log: #{inspect reason}")
+    Logger.error "Failed writing to message log: #{inspect reason}"
     callbacks |> Enum.each(fn {from, _offset, _len} ->
       GenServer.reply(from, {:error, reason})
     end)

@@ -60,7 +60,7 @@ defmodule Postnord.Test.IndexLog do
     end
     # Write enough messages to exceed buffer size
     {time_large, _} = :timer.tc fn ->
-      1..4 |> Enum.map(fn n ->
+      1..4 |> Enum.map(fn _ ->
         Task.async(fn -> IndexLog.write(context[:pid], random_entry()) end)
       end)
       |> Enum.each(fn t ->

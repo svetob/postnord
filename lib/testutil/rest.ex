@@ -1,4 +1,8 @@
 defmodule TestUtil.Rest do
+  @moduledoc """
+  Simple rest client for tests.
+  """
+
   def get_message(host) do
     "#{host}/queue/q/message" |> HTTPoison.get!()
   end

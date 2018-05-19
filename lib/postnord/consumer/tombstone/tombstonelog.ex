@@ -34,7 +34,7 @@ defmodule Postnord.TombstoneLog do
     |> File.mkdir_p()
 
     # Open output file
-    Logger.debug "Opening: #{Path.absname(state.path)}"
+    Logger.debug fn -> "Opening: #{Path.absname(state.path)}" end
     file = File.open!(state.path, @file_opts)
 
     {:ok, %State{state | iodevice: file}}

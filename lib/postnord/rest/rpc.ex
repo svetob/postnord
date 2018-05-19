@@ -4,6 +4,10 @@ defmodule Postnord.Rest.RPC do
   alias Postnord.Id
   alias Postnord.Partition
 
+  @moduledoc """
+  REST RPC request handler.
+  """
+
   def replicate(_queue, id, timestamp, body) do
     {:ok, id} = Id.message_id_decode(id)
     {timestamp, _} = Integer.parse(timestamp)

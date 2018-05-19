@@ -34,7 +34,7 @@ defmodule TestUtil.Cluster do
 
   defp spawn_node(all_nodes, {id, port}) do
     {:ok, node} = :slave.start('127.0.0.1', String.to_atom("node#{port}"), slave_args())
-    Logger.debug "#{__MODULE__} Starting slave #{id} with node name #{inspect node}"
+    Logger.debug fn -> "#{__MODULE__} Starting slave #{id} with node name #{inspect node}" end
 
     add_code_paths(node)
     transfer_configuration(node)

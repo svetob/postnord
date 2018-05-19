@@ -12,7 +12,6 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
   """
 
   @ports [2011, 2012, 2013]
-  @req_opts [timeout: 10_000_000]
 
   setup_all do
     cluster = TestUtil.Cluster.create(@ports)
@@ -70,7 +69,7 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
 
     # Read from any node returns no content
     Enum.each(context[:uris], fn node ->
-      resp_get = Rest.get_message(uri_b)
+      resp_get = Rest.get_message(node)
       assert resp_get.status_code == 204
     end)
   end
@@ -122,7 +121,7 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
     Process.sleep(100)
 
     Enum.each(context[:uris], fn node ->
-      resp_get = Rest.get_message(uri_b)
+      resp_get = Rest.get_message(node)
       assert resp_get.status_code == 204
     end)
   end

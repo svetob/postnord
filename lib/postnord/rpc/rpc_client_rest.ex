@@ -7,6 +7,10 @@ defmodule Postnord.RPC.Client.Rest do
 
   @behaviour Postnord.RPC.Client
 
+  @moduledoc """
+  RPC client handling remote invocations over HTTP
+  """
+
   @http_headers [{"Content-Type", "text/plain"}]
   @http_options [hackney: [pool: :default]]
 
@@ -35,7 +39,7 @@ defmodule Postnord.RPC.Client.Rest do
         id_encoded = Id.message_id_encode(id)
         uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/timestamp/#{timestamp}/replicate"
 
-        Logger.debug "#{__MODULE__} Sending replicate request to #{uri}"
+        Logger.debug fn -> "#{__MODULE__} Sending replicate request to #{uri}" end
 
         case HTTPoison.post(uri, message, @http_headers, @http_options) do
           {:ok, %HTTPoison.Response{status_code: 201}} ->
@@ -56,7 +60,7 @@ defmodule Postnord.RPC.Client.Rest do
         id_encoded = Id.message_id_encode(id)
         uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/tombstone"
 
-        Logger.debug "#{__MODULE__} Sending tombstone request to #{uri}"
+        Logger.debug fn -> "#{__MODULE__} Sending tombstone request to #{uri}" end
 
         case HTTPoison.post(uri, "", @http_headers, @http_options) do
           {:ok, %HTTPoison.Response{status_code: 202}} ->
@@ -76,7 +80,7 @@ defmodule Postnord.RPC.Client.Rest do
     spawn_link fn ->
         uri = node_uri <> "/rpc/queue/#{queue}/flush"
 
-        Logger.debug "#{__MODULE__} Sending flush request to #{uri}"
+        Logger.debug fn -> "#{__MODULE__} Sending flush request to #{uri}" end
 
         case HTTPoison.post(uri, "", @http_headers, @http_options) do
           {:ok, %HTTPoison.Response{status_code: 202}} ->

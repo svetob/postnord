@@ -14,7 +14,7 @@ defmodule Postnord.Test.Integration.REST do
   end
 
   test "can check server status" do
-    %HTTPoison.Response{body: body, status_code: 200} = HTTPoison.get!("#{host}/_status")
+    %HTTPoison.Response{body: body, status_code: 200} = HTTPoison.get!("#{host()}/_status")
     assert Poison.decode!(body)["status"] == "ok"
   end
 
@@ -48,7 +48,7 @@ defmodule Postnord.Test.Integration.REST do
   end
 
   test "405 for unsupported operations" do
-    resp_put = HTTPoison.put!("#{host}/queue/q/message", "Foo")
+    resp_put = HTTPoison.put!("#{host()}/queue/q/message", "Foo")
     assert resp_put.status_code == 405
   end
 

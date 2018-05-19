@@ -4,6 +4,10 @@ defmodule Postnord.Rest.Queue do
   alias Postnord.Id
   alias Postnord.Partition
 
+  @moduledoc """
+  REST Queue request handler.
+  """
+
   def message_get(_queue) do
     case PartitionConsumer.read(PartitionConsumer) do
       {:ok, id, message} ->
