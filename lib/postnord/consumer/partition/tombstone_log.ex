@@ -1,4 +1,4 @@
-defmodule Postnord.TombstoneLog.State do
+defmodule Postnord.Consumer.Partition.Tombstone.Log.State do
   @moduledoc """
   State struct for index log.
   """
@@ -11,11 +11,11 @@ defmodule Postnord.TombstoneLog.State do
             callbacks: []
 end
 
-defmodule Postnord.TombstoneLog do
+defmodule Postnord.Consumer.Partition.Tombstone.Log do
   require Logger
   use GenServer
-  alias Postnord.TombstoneLog.Tombstone
-  alias Postnord.TombstoneLog.State
+  alias Postnord.Consumer.Partition.Tombstone
+  alias Postnord.Consumer.Partition.Tombstone.Log.State
 
   @moduledoc """
   Appends message indexes to the tombstone log

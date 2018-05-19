@@ -1,5 +1,4 @@
 defmodule Postnord.Perftest do
-  alias Postnord.Consumer.PartitionConsumer
   alias Postnord.RPC.Coordinator
   require Logger
 

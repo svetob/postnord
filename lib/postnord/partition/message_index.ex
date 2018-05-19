@@ -1,5 +1,6 @@
-defmodule Postnord.IndexLog.Entry do
+defmodule Postnord.Partition.MessageIndex do
   require Logger
+  
   import Postnord.BinaryConvert
   import ExUnit.Assertions
 
@@ -30,7 +31,7 @@ defmodule Postnord.IndexLog.Entry do
   def from_bytes(bytes) do
     assert byte_size(bytes) == @entry_size
 
-    %Postnord.IndexLog.Entry{
+    %Postnord.Partition.MessageIndex{
       id: binary_part(bytes, 0, 16),
       offset: binary_to_integer(binary_part(bytes, 16, 8)),
       len: binary_to_integer(binary_part(bytes, 24, 8)),

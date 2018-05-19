@@ -43,10 +43,6 @@ defmodule Postnord.Mixfile do
       # CLI
       {:commando, "~> 0.1"},
 
-      # Logging
-      # {:lager_logger, "~> 1.0"},
-      # {:lager, "3.5.1", override: true},
-
       # Dev tools
       {:credo, "~> 0.5", only: :dev, runtime: false},
       {:dialyxir, "~> 0.4", only: :dev, runtime: false},

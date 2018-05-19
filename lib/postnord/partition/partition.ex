@@ -2,10 +2,9 @@ defmodule Postnord.Partition do
   require Logger
   use GenServer
 
-  alias Postnord.MessageLog
-  alias Postnord.IndexLog
-  alias Postnord.IndexLog.Entry
-  alias Postnord.Consumer.PartitionConsumer
+  alias Postnord.Log.Writer, as: LogWriter
+  alias Postnord.Partition.MessageIndex
+  alias Postnord.Consumer
 
   @moduledoc """
   Managing GenServer for a single message queue partition.
@@ -13,17 +12,28 @@ defmodule Postnord.Partition do
   Supervises child processes for partition, distributes messages to them.
   """
 
-  def start_link(path, opts \\ []) do
-    GenServer.start_link(__MODULE__, path, opts)
+  def start_link(args, opts \\ []) do
+    GenServer.start_link(__MODULE__, args, opts)
   end
 
-  def init(path) do
+  def init({path, queue, partition_id}) do
     import Supervisor.Spec, warn: false
 
+    data_path = path |> Path.join(queue) |> Path.join(partition_id)
+
     children = [
-      worker(MessageLog, [message_log_state(path), [name: MessageLog]]),
-      worker(IndexLog, [index_log_state(path), [name: IndexLog]]),
-      worker(PartitionConsumer, [partition_reader_state(path), [name: PartitionConsumer]])
+      %{
+        id: :message_log,
+        start: {LogWriter, :start_link, [message_log_state(data_path), [name: :message_log]]}
+      },
+      %{
+        id: :index_log,
+        start: {LogWriter, :start_link, [index_log_state(data_path), [name: :index_log]]}
+      },
+      %{
+        id: Consumer.Partition,
+        start: {Consumer.Partition, :start_link, [partition_reader_state(data_path), [name: Consumer.Partition]]}
+      }
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
@@ -31,54 +41,61 @@ defmodule Postnord.Partition do
   end
 
   defp message_log_state(path) do
-    env = Application.get_env(:postnord, MessageLog, [])
+    env = Application.get_env(:postnord, :message_log, [])
 
-    %Postnord.MessageLog.State{
-      buffer_size: env |> Keyword.get(:buffer_size),
-      flush_timeout: env |> Keyword.get(:flush_timeout),
-      path: path
+    %LogWriter.State{
+      buffer_size: Keyword.get(env, :buffer_size),
+      flush_timeout: Keyword.get(env, :flush_timeout),
+      path: Path.join(path, "message.log")
     }
   end
 
   defp index_log_state(path) do
-    env = Application.get_env(:postnord, IndexLog, [])
+    env = Application.get_env(:postnord, :index_log, [])
 
-    %Postnord.IndexLog.State{
-      buffer_size: env |> Keyword.get(:buffer_size),
-      flush_timeout: env |> Keyword.get(:flush_timeout),
+    %LogWriter.State{
+      buffer_size: Keyword.get(env, :buffer_size),
+      flush_timeout: Keyword.get(env, :flush_timeout),
       path: Path.join(path, "index.log")
     }
   end
 
   defp partition_reader_state(path) do
-    %PartitionConsumer.State{path: path}
+    %Consumer.Partition.State{path: path}
   end
 
   @doc """
   Replicate a single message to this partition on this node.
-  TODO Ensure message does not already exist locally (? or check it is not tombstoned ?)
+  TODO Somehow ensure message does not already exist locally.
   """
   def replicate_message(pid, id, timestamp, bytes, timeout \\ 5_000) do
-    try do
-      GenServer.call(pid, {:replicate, id, timestamp, bytes}, timeout)
-    catch
-      :exit, reason ->
-        Logger.error("Replication failed: #{inspect(reason)}")
-        {:error, reason}
-    end
+    GenServer.call(pid, {:replicate, id, timestamp, bytes}, timeout)
   end
 
   def handle_call({:replicate, id, timestamp, bytes}, from, nil) do
     spawn(fn ->
-      write_to_logs(id, timestamp, bytes)
-      GenServer.reply(from, :ok)
+      GenServer.reply(from, write_to_logs(id, timestamp, bytes))
     end)
 
     {:noreply, nil}
   end
 
   defp write_to_logs(id, timestamp, bytes) do
-    {:ok, offset, len} = MessageLog.write(MessageLog, bytes)
-    :ok = IndexLog.write(IndexLog, %Entry{id: id, timestamp: timestamp, offset: offset, len: len})
+    case LogWriter.write(:message_log, bytes) do
+      {:ok, offset, len} ->
+        index = %MessageIndex{id: id, timestamp: timestamp, offset: offset, len: len}
+        index_bytes = MessageIndex.as_bytes(index)
+
+        case LogWriter.write(:index_log, index_bytes) do
+          {:ok, _, _} ->
+            :ok
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end

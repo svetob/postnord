@@ -1,5 +1,6 @@
 defmodule Postnord do
   import Supervisor.Spec, warn: false
+
   require Logger
 
   @moduledoc """
@@ -25,7 +26,10 @@ defmodule Postnord do
 
   defp worker_postnord do
     data_path = Application.get_env(:postnord, :data_path)
-    [worker(Postnord.Partition, [data_path, [name: Postnord.Partition]])]
+    queue = "queue"
+    partition_id = Postnord.Id.partition_id()
+
+    [worker(Postnord.Partition, [{data_path, queue, partition_id}, [name: Postnord.Partition]])]
   end
 
   defp worker_coordinator do

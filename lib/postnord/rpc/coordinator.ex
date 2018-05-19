@@ -1,6 +1,6 @@
 defmodule Postnord.RPC.Coordinator do
   alias Postnord.Cluster.State, as: ClusterState
-  alias Postnord.Consumer.PartitionConsumer
+  alias Postnord.Consumer.Partition
   import Supervisor.Spec
   require Logger
   use GenServer
@@ -100,7 +100,7 @@ defmodule Postnord.RPC.Coordinator do
     Logger.debug(fn -> "#{__MODULE__} Coordinating read_message request" end)
 
     spawn_link(fn ->
-      GenServer.reply(from, PartitionConsumer.read(PartitionConsumer))
+      GenServer.reply(from, Partition.read(Partition))
     end)
 
     {:noreply, hosts}

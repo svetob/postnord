@@ -1,5 +1,5 @@
 defmodule Postnord.Rest.RPC do
-  alias Postnord.Consumer.PartitionConsumer
+  alias Postnord.Consumer
   alias Postnord.RPC.Coordinator
   alias Postnord.Id
   alias Postnord.Partition
@@ -24,7 +24,7 @@ defmodule Postnord.Rest.RPC do
   def tombstone(_queue, id) do
     {:ok, id} = Id.message_id_decode(id)
 
-    case PartitionConsumer.accept(PartitionConsumer, id) do
+    case Consumer.Partition.accept(Consumer.Partition, id) do
       :ok ->
         {:ok, 202, "OK"}
 
@@ -40,7 +40,7 @@ defmodule Postnord.Rest.RPC do
   end
 
   def flush(_queue) do
-    case PartitionConsumer.flush(PartitionConsumer) do
+    case Consumer.Partition.flush(Consumer.Partition) do
       :ok ->
         {:ok, 202, "OK"}
 

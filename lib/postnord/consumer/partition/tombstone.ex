@@ -1,4 +1,4 @@
-defmodule Postnord.TombstoneLog.Tombstone do
+defmodule Postnord.Consumer.Partition.Tombstone do
   @moduledoc """
   Tombstone definition.
   """

@@ -2,7 +2,7 @@ defmodule Postnord.RPC.Client.Local do
   @behaviour Postnord.RPC.Client
 
   alias Postnord.Partition
-  alias Postnord.Consumer.PartitionConsumer
+  alias Postnord.Consumer
 
   @moduledoc """
   RPC client handling local RPC invocations.
@@ -13,7 +13,7 @@ defmodule Postnord.RPC.Client.Local do
   end
 
   def tombstone(_pid, _partition, id, timeout \\ 5_000) do
-    case PartitionConsumer.accept(PartitionConsumer, id, timeout) do
+    case Consumer.Partition.accept(Consumer.Partition, id, timeout) do
       :ok -> :ok
       :noop -> :ok
       {:error, reason} -> {:error, reason}
@@ -22,6 +22,6 @@ defmodule Postnord.RPC.Client.Local do
   end
 
   def flush(_pid, _queue, timeout \\ 5_000) do
-    PartitionConsumer.flush(PartitionConsumer, timeout)
+    Consumer.Partition.flush(Consumer.Partition, timeout)
   end
 end
