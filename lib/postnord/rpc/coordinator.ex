@@ -16,62 +16,70 @@ defmodule Postnord.RPC.Coordinator do
   def init(_args) do
     cluster_state = ClusterState.get()
     my_id = cluster_state.my_id
-    senders = cluster_state.hosts |> Enum.map(fn host -> rpc_sender(host, my_id) end)
 
-    children = senders
-    |> Enum.map(fn {_, _, child} -> child end)
-    |> Enum.filter(fn child -> child != nil end)
-    Supervisor.start_link(children, [strategy: :one_for_one])
+    clients_info = Enum.map(cluster_state.hosts, fn host ->
+      rpc_client_info(host, my_id)
+    end)
 
-    sender_info = senders |> Enum.map(fn {module, name, _} -> {module, name} end)
-    {:ok, sender_info}
+    children = cluster_state.hosts
+      |> Enum.map(fn host -> rpc_client_worker(host, my_id) end)
+      |> Enum.filter(fn child -> child != nil end)
+
+    {:ok, _pid} = Supervisor.start_link(children, [strategy: :one_for_one])
+
+    {:ok, clients_info}
   end
 
-  defp rpc_sender({host_id, _host_path}, my_id) when host_id == my_id do
-    module = Postnord.RPC.Client.Local
-    name = rpc_sender_name("local")
-    {module, name, nil}
+  defp rpc_client_info({host_id, _host_path}, my_id) when host_id == my_id do
+    {Postnord.RPC.Client.Local, rpc_client_name("local")}
+  end
+  defp rpc_client_info({host_id, _host_path}, my_id) do
+    {Postnord.RPC.Client.Rest, rpc_client_name(host_id)}
   end
 
-  defp rpc_sender({host_id, host_path}, my_id) when host_id != my_id do
-    module = Postnord.RPC.Client.GRPC
-    name = rpc_sender_name(host_id)
-    child = worker(Postnord.RPC.Client.GRPC, [host_path, [name: name]], [id: name])
-    {module, name, child}
+  defp rpc_client_worker({host_id, _host_path}, my_id) when host_id == my_id do
+    nil
+  end
+  defp rpc_client_worker({host_id, host_path}, my_id) do
+    name = rpc_client_name(host_id)
+    %{
+      id: name,
+      start: {Postnord.RPC.Client.Rest, :start_link, [host_path, [name: name]]}
+    }
   end
 
-  defp rpc_sender_name(host_id) do
+  defp rpc_client_name(host_id) do
     String.to_atom("rpc_sender_#{host_id}")
   end
 
-  @spec write_message(String.t, integer) :: :ok | {:error, any()}
+  @spec write_message(String.t, integer) :: :ok | {:error, term}
   def write_message(queue, message, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:write_message, queue, message}, timeout)
   end
 
-  @spec read_message(String.t, integer) :: :ok | {:error, any()}
+  @spec read_message(String.t, integer) :: :ok | {:error, term}
   def read_message(queue, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:read_message, queue}, timeout)
   end
 
-  @spec confirm_accept(String.t, iolist(), integer) :: :ok | {:error, any()}
+  @spec confirm_accept(String.t, iolist, integer) :: :ok | {:error, term}
   def confirm_accept(queue, id, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:confirm_accept, queue, id}, timeout)
   end
 
-  @spec flush(String.t, integer) :: :ok | {:error, any()}
+  @spec flush(String.t, integer) :: :ok | {:error, term}
   def flush(queue, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:flush, queue}, timeout)
   end
 
 
   def handle_call({:write_message, _queue, message}, from, hosts) do
-    id = Postnord.IdGen.message_id()
+    id = Postnord.Id.message_id()
     partition = nil # TODO Choose partition for queue
-    timestamp = Postnord.now()
+    timestamp = Postnord.now(:nanosecond)
 
     spawn_link fn ->
-      Logger.debug "#{__MODULE__} Coordinating write_message request"
+      Logger.debug fn -> "#{__MODULE__} Coordinating write_message request" end
       hosts
       |> Enum.map(fn {module, name} ->
         Task.async(module, :replicate, [name, partition, id, timestamp, message])
@@ -82,7 +90,7 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:read_message, _queue}, from, hosts) do
-    Logger.debug "#{__MODULE__} Coordinating read_message request"
+    Logger.debug fn -> "#{__MODULE__} Coordinating read_message request" end
     spawn_link fn ->
       GenServer.reply(from, PartitionConsumer.read(PartitionConsumer))
     end
@@ -90,7 +98,7 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:confirm_accept, _queue, id}, from, hosts) do
-    Logger.debug "#{__MODULE__} Coordinating accept request"
+    Logger.debug fn -> "#{__MODULE__} Coordinating accept request" end
     partition = nil # TODO Extract partition from public ID
 
     spawn_link fn ->
@@ -104,7 +112,7 @@ defmodule Postnord.RPC.Coordinator do
   end
 
   def handle_call({:flush, queue}, from, hosts) do
-    Logger.debug "#{__MODULE__} Coordinating flush request"
+    Logger.debug fn -> "#{__MODULE__} Coordinating flush request" end
     spawn_link fn ->
       hosts
       |> Enum.map(fn {module, name} ->
@@ -128,7 +136,7 @@ defmodule Postnord.RPC.Coordinator do
 
   # Calculate required quorum for host set
   defp quorum_required(node_count) do
-    round(Float.floor(node_count/2)) + 1
+    round(Float.floor(node_count / 2)) + 1
   end
 
   # Await task results and determine if quorum was met

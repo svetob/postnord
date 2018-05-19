@@ -5,7 +5,7 @@ defmodule Postnord.RPC.Client.Local do
   alias Postnord.Consumer.PartitionConsumer
 
   @moduledoc """
-  RPC sender handling local RPC invocations.
+  RPC client handling local RPC invocations.
   """
 
   def replicate(_pid, _partition, id, timestamp, message, timeout \\ 5_000) do

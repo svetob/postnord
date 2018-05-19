@@ -92,7 +92,7 @@ defmodule Postnord.Consumer.PartitionConsumer do
   end
 
   def handle_call({:flush}, _from, state) do
-    {:reply, :ok, %State{state | timestamp_cutoff: Postnord.now()}}
+    {:reply, :ok, %State{state | timestamp_cutoff: Postnord.now(:nanosecond)}}
   end
 
   defp tombstoned?(%State{tombstones: tombstones}, tombstone) do

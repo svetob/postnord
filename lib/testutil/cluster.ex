@@ -4,20 +4,20 @@ defmodule TestUtil.Cluster do
   @moduledoc """
   Utilities for creating and managing a multi-node test cluster.
 
-  [ ] The nodes run on localhost and communicate via GRPC
+  [ ] The nodes run on localhost and communicate via HTTP
   [ ] Data is stored under /test/data
   [ ] Test data is cleaned up after termination
   """
 
   @doc """
-  Creates a local cluster with one node for each gRPC port given as argument.
+  Creates a local cluster with one node for each HTTP port given as argument.
   """
-  def create(ports \\ [2021, 2022, 2023]) do
-    Logger.debug "#{__MODULE__} Launching test cluster"
+  def create(ports \\ [2011, 2012, 2013]) do
+    Logger.info "#{__MODULE__} Launching test cluster"
     enable_node_boot()
 
     nodes = ports
-    |> Enum.map(fn port -> {Postnord.IdGen.node_id(), port} end)
+    |> Enum.map(fn port -> {Postnord.Id.node_id(), port} end)
 
     nodes
     |> Enum.map(&Task.async(fn -> spawn_node(nodes, &1) end))
@@ -33,9 +33,9 @@ defmodule TestUtil.Cluster do
   end
 
   defp spawn_node(all_nodes, {id, port}) do
-    Logger.debug "#{__MODULE__} Starting slave #{id} with gRPC port #{port}"
     {:ok, node} = :slave.start('127.0.0.1', String.to_atom("node#{port}"), slave_args())
-    
+    Logger.debug fn -> "#{__MODULE__} Starting slave #{id} with node name #{inspect node}" end
+
     add_code_paths(node)
     transfer_configuration(node)
     apply_new_configurations(all_nodes, node, id, port)
@@ -85,16 +85,16 @@ defmodule TestUtil.Cluster do
     end
   end
 
-  defp apply_new_configurations(all_nodes, node, id, grpc_port) do
+  defp apply_new_configurations(all_nodes, node, id, http_port) do
     replica_nodes = all_nodes |> Enum.map(fn {id, port} ->
       {id, "localhost:#{port}"}
     end)
 
     envs = [
       [:postnord, :data_path, "test/data/cluster/#{id}/"],
-      [:postnord, :port, grpc_port + 10],
-      [:postnord, :grpc_port, grpc_port],
-      [:postnord, :replica_nodes, replica_nodes],
+      [:postnord, :port, http_port],
+      [:postnord, :node_id, id],
+      [:postnord, :replica_nodes, replica_nodes]
     ]
 
     envs |> Enum.each(fn env ->
@@ -111,6 +111,19 @@ defmodule TestUtil.Cluster do
   end
 
   defp start_postnord(node) do
-    :ok == :rpc.block_call(node, Postnord, :main, [])
+    :ok == :rpc.cast(node, TestUtil.Cluster, :cluster_node_start, [])
+  end
+
+  @doc """
+  Start a node and prevent process from closing
+  """
+  def cluster_node_start do
+    Postnord.main([])
+    keepalive()
+  end
+
+  defp keepalive do
+    Process.sleep(10_000)
+    keepalive()
   end
 end

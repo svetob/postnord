@@ -19,7 +19,6 @@ defmodule Postnord.Test.IndexLog do
                    flush_timeout: @flush_timeout}
 
     {:ok, index_log} = IndexLog.start_link(state)
-    IO.puts @path_index_log
     {:ok, file} = File.open(@path_index_log)
 
     on_exit fn ->
@@ -61,7 +60,7 @@ defmodule Postnord.Test.IndexLog do
     end
     # Write enough messages to exceed buffer size
     {time_large, _} = :timer.tc fn ->
-      1..4 |> Enum.map(fn n ->
+      1..4 |> Enum.map(fn _ ->
         Task.async(fn -> IndexLog.write(context[:pid], random_entry()) end)
       end)
       |> Enum.each(fn t ->
@@ -84,7 +83,7 @@ defmodule Postnord.Test.IndexLog do
   end
 
   def random_entry do
-    %Entry{id: Postnord.IdGen.message_id(), offset: 10, len: 20}
+    %Entry{id: Postnord.Id.message_id(), offset: 10, len: 20}
   end
 
 end
