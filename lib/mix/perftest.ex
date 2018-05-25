@@ -1,5 +1,4 @@
 defmodule Postnord.Perftest do
-  alias Postnord.Consumer.PartitionConsumer
   alias Postnord.RPC.Coordinator
   require Logger
 
@@ -11,7 +10,13 @@ defmodule Postnord.Perftest do
   Launch Postnord application
   """
   def launch do
-    Postnord.main(["--disable-http-server"])
+    Mix.Project.config()
+    |> Keyword.get(:deps)
+    |> Enum.each(fn dependency ->
+      Application.ensure_all_started(elem(dependency, 0))
+    end)
+
+    Postnord.main([])
   end
 
   @doc """
@@ -66,8 +71,11 @@ defmodule Postnord.Perftest do
 
   defp write(from, msg, remain) do
     case Coordinator.write_message(nil, msg) do
-      :ok -> write(from, msg, remain - 1)
-      {:error, reason} -> raise {:error, reason}
+      :ok ->
+        write(from, msg, remain - 1)
+
+      {:error, reason} ->
+        raise {:error, reason}
     end
   end
 

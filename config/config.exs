@@ -7,11 +7,11 @@ config :postnord,
   port: 2010,
   replica_nodes: []
 
-config :postnord, Postnord.IndexLog,
+config :postnord, :index_log,
   buffer_size: 128 * 1024,
   flush_timeout: 5
 
-config :postnord, Postnord.MessageLog,
+config :postnord, :message_log,
   buffer_size: 4 * 1024,
   flush_timeout: 5
 

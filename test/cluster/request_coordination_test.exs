@@ -10,6 +10,8 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
   accross multiple nodes.
   """
 
+  @moduletag :cluster
+
   @ports [2011, 2012, 2013]
 
   setup_all do

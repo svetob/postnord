@@ -1,4 +1,4 @@
-defmodule Postnord.Consumer.PartitionConsumer.State do
+defmodule Postnord.Consumer.Partition.State do
   @moduledoc """
   State struct for partition reader.
   """
@@ -14,14 +14,16 @@ defmodule Postnord.Consumer.PartitionConsumer.State do
             timestamp_cutoff: 0
 end
 
-defmodule Postnord.Consumer.PartitionConsumer do
-  require Logger
-  import Postnord.Consumer.PartitionConsumer.IndexLog
-  import Postnord.Consumer.PartitionConsumer.MessageLog
+defmodule Postnord.Consumer.Partition do
   use GenServer
 
-  alias Postnord.Consumer.PartitionConsumer.State
-  alias Postnord.TombstoneLog.Tombstone
+  require Logger
+
+  import Postnord.Consumer.Partition.IndexLog
+  import Postnord.Consumer.Partition.MessageLog
+
+  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.Partition.Tombstone
 
   @moduledoc """
   This is a first pass at a consumer process to read from a partition.
@@ -79,9 +81,14 @@ defmodule Postnord.Consumer.PartitionConsumer do
 
   def handle_call(:read, _from, state) do
     case state |> ensure_open |> next_index_entry |> read_message do
-      :empty -> {:reply, :empty, state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
-      {:ok, state, id, bytes} -> {:reply, {:ok, id, bytes}, state}
+      :empty ->
+        {:reply, :empty, state}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+
+      {:ok, state, id, bytes} ->
+        {:reply, {:ok, id, bytes}, state}
     end
   end
 

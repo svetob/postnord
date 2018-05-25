@@ -31,6 +31,10 @@ defmodule Postnord.Id do
     RandomBytes.uuid()
   end
 
+  def partition_id do
+    RandomBytes.uuid()
+  end
+
   @doc """
   Returns a unique 128-bit message ID, as a 16-byte binary.
 

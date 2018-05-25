@@ -1,9 +1,9 @@
-defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
+defmodule Postnord.Consumer.Partition.IndexLog do
   require Logger
 
-  alias Postnord.IndexLog.Entry
-  alias Postnord.Consumer.PartitionConsumer.State
-  alias Postnord.TombstoneLog.Tombstone
+  alias Postnord.Partition.MessageIndex
+  alias Postnord.Consumer.Partition.State
+  alias Postnord.Consumer.Partition.Tombstone
 
   @moduledoc """
   Consumer functions for opening and reading from index log.
@@ -38,7 +38,7 @@ defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
   #       It will resend a message until it is accepted, and not resend earlier
   #       requeued entries.
   defp scan_index_entries(state) do
-    case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, Entry.entry_size()) do
+    case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, MessageIndex.entry_size()) do
       :eof ->
         :empty
 
@@ -47,13 +47,13 @@ defmodule Postnord.Consumer.PartitionConsumer.IndexLog do
         {:error, reason}
 
       {:ok, bytes} ->
-        entry = Entry.from_bytes(bytes)
+        entry = MessageIndex.from_bytes(bytes)
 
         if consumed?(entry, state) do
           # Message is consumed, proceed
           state = %State{
             state
-            | indexlog_bytes_read: state.indexlog_bytes_read + Entry.entry_size()
+            | indexlog_bytes_read: state.indexlog_bytes_read + MessageIndex.entry_size()
           }
 
           scan_index_entries(state)
