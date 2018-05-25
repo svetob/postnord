@@ -27,7 +27,10 @@ defmodule Postnord.Log.Writer do
   to disk. Response is sent to callers once entry is persisted.
   """
 
-  @file_opts [:binary, :append, :sync]
+  # TODO: Make this not a genserver
+  # TODO: Instead of timeout, check for empty message queue
+
+  @file_opts [:binary, :append, :raw, :sync]
 
   def start_link(args, opts \\ []) do
     GenServer.start_link(__MODULE__, args, opts)
@@ -60,7 +63,6 @@ defmodule Postnord.Log.Writer do
   def handle_call({:write, bytes}, from, state) do
     state = buffer(state, from, bytes)
 
-    Logger.debug(fn -> "#{__MODULE__} Buffer size is #{byte_size(state.buffer)}" end)
     if byte_size(state.buffer) >= state.buffer_size do
       {:noreply, flush(state)}
     else
@@ -94,29 +96,35 @@ defmodule Postnord.Log.Writer do
 
   # Persist the write buffer to disk and notify all in callbacks list.
   defp flush(state) do
-    spawn(fn ->
-      Logger.debug(fn -> "#{__MODULE__} Flushing data to #{state.path}" end)
+    Logger.debug(fn -> "#{__MODULE__} Flushing data to #{state.path}" end)
 
-      state.iodevice
-      |> IO.binwrite(state.buffer)
-      |> send_callbacks(state.callbacks)
-    end)
+    case do_buffer_write(state.iodevice, state.buffer) do
+      :ok ->
+        reply_ok(state.callbacks)
+
+      {:error, reason} ->
+        Logger.error("#{__MODULE__} Failed writing to index log: #{inspect(reason)}")
+        reply_error(reason, state.callbacks)
+    end
 
     %State{state | buffer: <<>>, callbacks: []}
   end
 
-  defp send_callbacks(:ok, callbacks) do
-    callbacks
-    |> Enum.each(fn {from, offset, len} ->
+  defp do_buffer_write(iodevice, buffer) do
+    Logger.debug(fn -> "#{__MODULE__} Writing data" end)
+    res = :file.write(iodevice, buffer)
+    Logger.debug(fn -> "#{__MODULE__} Wrote data" end)
+    res
+  end
+
+  defp reply_ok(callbacks) do
+    Enum.each(callbacks, fn {from, offset, len} ->
       GenServer.reply(from, {:ok, offset, len})
     end)
   end
 
-  defp send_callbacks({:error, reason}, callbacks) do
-    Logger.error("#{__MODULE__} Failed writing to index log: #{inspect(reason)}")
-
-    callbacks
-    |> Enum.each(fn {from, _offset, _len} ->
+  defp reply_error(reason, callbacks) do
+    Enum.each(callbacks, fn {from, _offset, _len} ->
       GenServer.reply(from, {:error, reason})
     end)
   end
