@@ -98,7 +98,7 @@ defmodule Postnord.Log.Writer do
   defp flush(state) do
     Logger.debug(fn -> "#{__MODULE__} Flushing data to #{state.path}" end)
 
-    case do_buffer_write(state.iodevice, state.buffer) do
+    case do_write(state.iodevice, state.buffer) do
       :ok ->
         reply_ok(state.callbacks)
 
@@ -110,11 +110,8 @@ defmodule Postnord.Log.Writer do
     %State{state | buffer: <<>>, callbacks: []}
   end
 
-  defp do_buffer_write(iodevice, buffer) do
-    Logger.debug(fn -> "#{__MODULE__} Writing data" end)
-    res = :file.write(iodevice, buffer)
-    Logger.debug(fn -> "#{__MODULE__} Wrote data" end)
-    res
+  defp do_write(iodevice, buffer) do
+    :file.write(iodevice, buffer)
   end
 
   defp reply_ok(callbacks) do
