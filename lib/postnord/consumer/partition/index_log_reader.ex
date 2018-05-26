@@ -1,4 +1,4 @@
-defmodule Postnord.Consumer.Partition.IndexLog do
+defmodule Postnord.Consumer.Partition.IndexLogReader do
   require Logger
 
   alias Postnord.Partition.MessageIndex
@@ -11,7 +11,10 @@ defmodule Postnord.Consumer.Partition.IndexLog do
 
   @file_opts [:read, :raw, :binary]
 
-  def ensure_open_indexlog({:ok, %State{indexlog_iodevice: nil} = state}) do
+  @doc """
+  Ensure index log iodevice is opened.
+  """
+  def ensure_open(%State{indexlog_iodevice: nil} = state) do
     case File.open(state.indexlog_path, @file_opts) do
       {:ok, iodevice} ->
         Logger.info("Reading: #{Path.absname(state.indexlog_path)}")
@@ -23,22 +26,23 @@ defmodule Postnord.Consumer.Partition.IndexLog do
     end
   end
 
-  def ensure_open_indexlog({:ok, _state} = ok), do: ok
-  def ensure_open_indexlog({:error, _reason} = error), do: error
-
-  def next_index_entry({:ok, state}) do
-    scan_index_entries(state)
+  def ensure_open(state) do
+    {:ok, state}
   end
 
-  def next_index_entry(:empty), do: :empty
-  def next_index_entry({:error, _reason} = error), do: error
-
-  # Scan index entries until one which is not tombstoned is found
+  @doc """
+  Read next index entry from index log.
+  """
+  # Scans index entries until one which is not tombstoned is found
   # TODO: This is a first dumb+wrong implementation, just to get started.
-  #       It will resend a message until it is accepted, and not resend earlier
-  #       requeued entries.
-  defp scan_index_entries(state) do
-    case :file.pread(state.indexlog_iodevice, state.indexlog_bytes_read, MessageIndex.entry_size()) do
+  #       It will resend a message until it is accepted, and not resend rejected
+  #       messages.
+  def next(state) do
+    iodevice = state.indexlog_iodevice
+    offset = state.indexlog_bytes_read
+    size = MessageIndex.entry_size()
+
+    case :file.pread(iodevice, offset, size) do
       :eof ->
         :empty
 
@@ -51,12 +55,7 @@ defmodule Postnord.Consumer.Partition.IndexLog do
 
         if consumed?(entry, state) do
           # Message is consumed, proceed
-          state = %State{
-            state
-            | indexlog_bytes_read: state.indexlog_bytes_read + MessageIndex.entry_size()
-          }
-
-          scan_index_entries(state)
+          next(%State{state | indexlog_bytes_read: offset + size})
         else
           # Message not tombstoned, read it
           {:ok, state, entry}
@@ -64,6 +63,7 @@ defmodule Postnord.Consumer.Partition.IndexLog do
     end
   end
 
+  # TODO Consumption check should check tombstones and holds, not timestamps
   defp consumed?(entry, state) do
     entry.timestamp <= state.timestamp_cutoff or
       state.tombstones |> MapSet.member?(tombstone(entry))

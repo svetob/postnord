@@ -1,4 +1,4 @@
-defmodule Postnord.Consumer.Partition.MessageLog do
+defmodule Postnord.Consumer.Partition.MessageLogReader do
   require Logger
 
   alias Postnord.Consumer.Partition.State
@@ -9,7 +9,10 @@ defmodule Postnord.Consumer.Partition.MessageLog do
 
   @file_opts [:read, :raw, :binary]
 
-  def ensure_open_messagelog({:ok, %State{messagelog_iodevice: nil} = state}) do
+  @doc """
+  Ensure message log iodevice is opened.
+  """
+  def ensure_open(%State{messagelog_iodevice: nil} = state) do
     case File.open(state.messagelog_path, @file_opts) do
       {:ok, iodevice} ->
         Logger.debug(fn -> "Reading: #{Path.absname(state.messagelog_path)}" end)
@@ -21,32 +24,34 @@ defmodule Postnord.Consumer.Partition.MessageLog do
     end
   end
 
-  def ensure_open_messagelog({:ok, _state} = ok), do: ok
-  def ensure_open_messagelog({:error, _reason} = error), do: error
+  def ensure_open(state) do
+    {:ok, state}
+  end
 
-  def read_message({:ok, state, entry}) do
-    len = entry.len
+  @doc """
+  Read message from message log.
+  """
+  def read(state, entry) do
+    iodevice = state.messagelog_iodevice
+    offset = entry.offset
+    size = entry.len
 
-    case :file.pread(state.messagelog_iodevice, entry.offset, len) do
+    case :file.pread(iodevice, offset, size) do
+      {:ok, bytes} when byte_size(bytes) == size ->
+        {:ok, state, entry.id, bytes}
+
+      {:ok, bytes} ->
+        reason = "Message size #{byte_size(bytes)} did not match expected size #{size}"
+        Logger.error("#{__MODULE__} #{reason}")
+        {:error, reason}
+
       :eof ->
-        :empty
+        Logger.error("Failed to read message log entry: EOF")
+        {:error, :eof}
 
       {:error, reason} ->
         Logger.error("Failed to read message log entry: #{inspect(reason)}")
         {:error, reason}
-
-      {:ok, bytes} when byte_size(bytes) != len ->
-        Logger.warn(
-          "Message size #{byte_size(bytes)} did not match expected size #{len}, assuming message is not fully written to disk yet"
-        )
-
-        :empty
-
-      {:ok, bytes} ->
-        {:ok, state, entry.id, bytes}
     end
   end
-
-  def read_message(:empty), do: :empty
-  def read_message({:error, _reason} = error), do: error
 end

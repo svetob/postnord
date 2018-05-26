@@ -83,14 +83,14 @@ defmodule Postnord.Test.Consumer.Partition do
     assert :empty == Partition.read(context[:pid])
   end
 
-  test "Returns :empty if data for entry not written yet", context do
+  test "Returns {:error, :eof} if message bytes not found for entry", context do
     msgs = ["foo"]
     entries = entries_for(["foo", "bar"])
     write_data(msgs, entries)
 
     {:ok, id, "foo"} = Partition.read(context[:pid])
     assert :ok == Partition.accept(context[:pid], id)
-    assert :empty == Partition.read(context[:pid])
+    assert {:error, :eof} == Partition.read(context[:pid])
   end
 
   test "Returns :empty if entry for data not written yet", context do
@@ -103,14 +103,14 @@ defmodule Postnord.Test.Consumer.Partition do
     assert :empty == Partition.read(context[:pid])
   end
 
-  test "Returns :empty if data for entry only partially written", context do
+  test "Returns {:error, _} if data for entry only partially written", context do
     msgs = ["foo", "ba"]
     entries = entries_for(["foo", "bar"])
     write_data(msgs, entries)
 
     {:ok, id, "foo"} = Partition.read(context[:pid])
     assert :ok == Partition.accept(context[:pid], id)
-    assert :empty == Partition.read(context[:pid])
+    {:error, _reason} = Partition.read(context[:pid])
   end
 
   test "Returns :error if message log does not exist", context do
