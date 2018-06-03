@@ -3,10 +3,32 @@ defmodule Postnord.RPC.Client do
   Behaviour for RPC client handling internal cluster requests
   """
 
-  @callback replicate(atom() | pid(), String.t(), String.t(), integer, iolist(), integer) ::
-              :ok | {:error, any()}
+  @callback replicate(
+              pid :: atom() | pid(),
+              partition :: String.t(),
+              id :: String.t(),
+              timestamp :: integer,
+              message :: iolist(),
+              timeout :: integer
+            ) :: :ok | {:error, any()}
 
-  @callback tombstone(atom() | pid(), String.t(), String.t(), integer) :: :ok | {:error, any()}
+  @callback hold(
+              pid :: atom() | pid(),
+              partition :: String.t(),
+              id :: String.t(),
+              timeout :: integer
+            ) :: :hold | :reject | :tombstone | {:error, any()}
 
-  @callback flush(atom() | pid(), String.t(), integer) :: :ok | {:error, any()}
+  @callback tombstone(
+              pid :: atom() | pid(),
+              partition :: String.t(),
+              id :: String.t(),
+              timeout :: integer
+            ) :: :ok | {:error, any()}
+
+  @callback flush(
+              pid :: atom() | pid(),
+              partition :: String.t(),
+              timeout :: integer
+            ) :: :ok | {:error, any()}
 end

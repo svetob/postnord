@@ -26,6 +26,10 @@ defmodule Postnord.RPC.Client.Rest do
     GenServer.call(pid, {:replicate, partition, id, timestamp, message}, timeout)
   end
 
+  def hold(pid, partition, id, timeout \\ 5_000) do
+    GenServer.call(pid, {:hold, partition, id}, timeout)
+  end
+
   def tombstone(pid, partition, id, timeout \\ 5_000) do
     GenServer.call(pid, {:tombstone, partition, id}, timeout)
   end
@@ -47,6 +51,37 @@ defmodule Postnord.RPC.Client.Rest do
 
         {:ok, %HTTPoison.Response{status_code: status_code}} ->
           GenServer.reply(from, {:error, "Unexpected status code on replication: #{status_code}"})
+
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          GenServer.reply(from, {:error, reason})
+      end
+    end)
+
+    {:noreply, node_uri}
+  end
+
+  def handle_call({:hold, _partition, id}, from, node_uri) do
+    spawn_link(fn ->
+      id_encoded = Id.message_id_encode(id)
+      uri = node_uri <> "/rpc/queue/q/message/#{id_encoded}/hold"
+
+      Logger.debug(fn -> "#{__MODULE__} Sending hold request to #{uri}" end)
+
+      case HTTPoison.post(uri, "", @http_headers, @http_options) do
+        {:ok, %HTTPoison.Response{status_code: 200, body: "hold"}} ->
+          GenServer.reply(from, :hold)
+
+        {:ok, %HTTPoison.Response{status_code: 200, body: "reject"}} ->
+          GenServer.reply(from, :reject)
+
+        {:ok, %HTTPoison.Response{status_code: 200, body: "tombstone"}} ->
+          GenServer.reply(from, :tombstone)
+
+        {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+          GenServer.reply(from, {:error, "Unexpected response on hold: 200 #{body}"})
+
+        {:ok, %HTTPoison.Response{status_code: status_code}} ->
+          GenServer.reply(from, {:error, "Unexpected status code on hold: #{status_code}"})
 
         {:error, %HTTPoison.Error{reason: reason}} ->
           GenServer.reply(from, {:error, reason})

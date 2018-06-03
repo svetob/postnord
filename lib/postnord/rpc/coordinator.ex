@@ -1,7 +1,6 @@
 defmodule Postnord.RPC.Coordinator do
   alias Postnord.Cluster.State, as: ClusterState
   alias Postnord.Consumer.Partition
-  import Supervisor.Spec
   require Logger
   use GenServer
 
@@ -36,7 +35,7 @@ defmodule Postnord.RPC.Coordinator do
     {Postnord.RPC.Client.Local, rpc_client_name("local")}
   end
 
-  defp rpc_client_info({host_id, _host_path}, my_id) do
+  defp rpc_client_info({host_id, _host_path}, _my_id) do
     {Postnord.RPC.Client.Rest, rpc_client_name(host_id)}
   end
 
@@ -44,7 +43,7 @@ defmodule Postnord.RPC.Coordinator do
     nil
   end
 
-  defp rpc_client_worker({host_id, host_path}, my_id) do
+  defp rpc_client_worker({host_id, host_path}, _my_id) do
     name = rpc_client_name(host_id)
 
     %{
@@ -62,7 +61,7 @@ defmodule Postnord.RPC.Coordinator do
     GenServer.call(__MODULE__, {:write_message, queue, message}, timeout)
   end
 
-  @spec read_message(String.t(), integer) :: :ok | {:error, term}
+  @spec read_message(String.t(), integer) :: {:ok, iolist(), iolist()} | :empty | {:error, term}
   def read_message(queue, timeout \\ 5_000) do
     GenServer.call(__MODULE__, {:read_message, queue}, timeout)
   end
@@ -96,11 +95,12 @@ defmodule Postnord.RPC.Coordinator do
     {:noreply, hosts}
   end
 
-  def handle_call({:read_message, _queue}, from, hosts) do
+  def handle_call({:read_message, queue}, from, hosts) do
     Logger.debug(fn -> "#{__MODULE__} Coordinating read_message request" end)
 
     spawn_link(fn ->
-      GenServer.reply(from, Partition.read(Partition))
+      response = attempt_read(queue, hosts)
+      GenServer.reply(from, response)
     end)
 
     {:noreply, hosts}
@@ -136,6 +136,43 @@ defmodule Postnord.RPC.Coordinator do
     {:noreply, hosts}
   end
 
+  defp attempt_read(queue, hosts) do
+    case Partition.read(Partition) do
+      {:ok, id, bytes} ->
+        remote_hosts =
+          Enum.filter(hosts, fn {module, _name} ->
+            module != Postnord.RPC.Client.Local
+          end)
+
+        response =
+          remote_hosts
+          |> Enum.map(fn {module, name} ->
+            Task.async(module, :hold, [name, queue, id])
+          end)
+          |> handle_hold_response()
+
+        case response do
+          :ok ->
+            {:ok, id, bytes}
+
+          :reject ->
+            attempt_read(queue, hosts)
+
+          :tombstone ->
+            :tombstone
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      :empty ->
+        :empty
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp handle_response(tasks, from) do
     count = Enum.count(tasks)
 
@@ -145,6 +182,13 @@ defmodule Postnord.RPC.Coordinator do
       |> await_result_quorum(count)
 
     GenServer.reply(from, result)
+  end
+
+  defp handle_hold_response(tasks) do
+    count = Enum.count(tasks)
+    required = quorum_required(count + 1)
+
+    await_hold_quorum(tasks, required)
   end
 
   # Calculate required quorum for host set
@@ -169,6 +213,39 @@ defmodule Postnord.RPC.Coordinator do
     receive do
       {_ref, :ok} ->
         await_result_quorum(required, total, timeout, ok + 1, failed)
+
+      {_ref, {:error, _reason}} ->
+        await_result_quorum(required, total, timeout, ok, failed + 1)
+    after
+      timeout ->
+        Logger.warn("Quorum failed: #{required} required, #{ok} responded")
+        {:error, "Quorum failed: #{required} required, #{ok} responded"}
+    end
+  end
+
+  # Await task results and determine if quorum was met
+  defp await_hold_quorum(required, total, timeout \\ 5_000, ok \\ 0, failed \\ 0)
+
+  defp await_hold_quorum(required, _total, _timeout, ok, _failed) when ok >= required do
+    :ok
+  end
+
+  defp await_hold_quorum(required, total, _timeout, ok, failed)
+       when failed > total - required do
+    Logger.warn("Quorum failed: #{required} required, #{ok} succeeded, #{failed} failed")
+    {:error, "Quorum failed: #{required} required, #{ok} succeeded, #{failed} failed"}
+  end
+
+  defp await_hold_quorum(required, total, timeout, ok, failed) do
+    receive do
+      {_ref, :hold} ->
+        await_result_quorum(required, total, timeout, ok + 1, failed)
+
+      {_ref, :reject} ->
+        await_result_quorum(required, total, timeout, ok, failed + 1)
+
+      {_ref, :tombstone} ->
+        :tombstone
 
       {_ref, {:error, _reason}} ->
         await_result_quorum(required, total, timeout, ok, failed + 1)

@@ -4,12 +4,14 @@ defmodule Postnord.Consumer.Partition.IndexLogReader do
   alias Postnord.Partition.MessageIndex
   alias Postnord.Consumer.Partition.State
   alias Postnord.Consumer.Partition.Tombstone
+  alias Postnord.Consumer.Partition.Holds
 
   @moduledoc """
   Consumer functions for opening and reading from index log.
   """
 
-  @file_opts [:read, :raw, :binary]
+  @readahead 64 * 1024 * 1024
+  @file_opts [:binary, :read, :raw, {:read_ahead, @readahead}]
 
   @doc """
   Ensure index log iodevice is opened.
@@ -65,8 +67,7 @@ defmodule Postnord.Consumer.Partition.IndexLogReader do
 
   # TODO Consumption check should check tombstones and holds, not timestamps
   defp consumed?(entry, state) do
-    entry.timestamp <= state.timestamp_cutoff or
-      state.tombstones |> MapSet.member?(tombstone(entry))
+    Holds.held?(state.holds, entry.id) or state.tombstones |> MapSet.member?(tombstone(entry))
   end
 
   defp tombstone(entry), do: %Tombstone{id: entry.id}

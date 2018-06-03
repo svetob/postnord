@@ -12,6 +12,10 @@ defmodule Postnord.RPC.Client.Local do
     Partition.replicate_message(Partition, id, timestamp, message, timeout)
   end
 
+  def hold(_pid, _partition, id, timeout \\ 5_000) do
+    Consumer.Partition.hold(Consumer.Partition, id, timeout)
+  end
+
   def tombstone(_pid, _partition, id, timeout \\ 5_000) do
     case Consumer.Partition.accept(Consumer.Partition, id, timeout) do
       :ok -> :ok

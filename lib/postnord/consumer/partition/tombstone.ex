@@ -3,7 +3,7 @@ defmodule Postnord.Consumer.Partition.Tombstone do
   Tombstone definition.
   """
 
-  defstruct id: 0
+  defstruct id: <<>>
 
   @byte_size 16
   def byte_size, do: @byte_size

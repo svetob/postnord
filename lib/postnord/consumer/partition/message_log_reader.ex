@@ -7,7 +7,8 @@ defmodule Postnord.Consumer.Partition.MessageLogReader do
   Consumer functions for opening and reading from message log.
   """
 
-  @file_opts [:read, :raw, :binary]
+  @readahead 256 * 1024 * 1024
+  @file_opts [:binary, :read, :raw, {:read_ahead, @readahead}]
 
   @doc """
   Ensure message log iodevice is opened.

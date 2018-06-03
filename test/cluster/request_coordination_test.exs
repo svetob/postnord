@@ -74,29 +74,25 @@ defmodule Postnord.Test.Cluster.RequestCoordination do
     end)
   end
 
-  # TODO Requires message holds
-  # test "cannot see a message from any node once it has been read", context do
-  #   [uri_a, uri_b, _] = context[:uris]
-  #
-  #   message = RandomBytes.base62(1024)
-  #
-  #   # Write message to node A
-  #   resp_post = Rest.post_message(uri_a, message)
-  #   assert resp_post.status_code == 201
-  #
-  #   # Read message from node B
-  #   resp_get = Rest.get_message(uri_b)
-  #   assert resp_get.status_code == 200
-  #   assert resp_get.body == message
-  #
-  #   # TODO Sleep should not be necessary
-  #   Process.sleep(100)
-  #
-  #   Enum.each(context[:uris], fn node ->
-  #     resp_get = Rest.get_message(uri_b)
-  #     assert resp_get.status_code == 204
-  #   end)
-  # end
+  test "cannot see a message from any node once it has been read", context do
+    [uri_a, uri_b, _] = context[:uris]
+
+    message = RandomBytes.base62(1024)
+
+    # Write message to node A
+    resp_post = Rest.post_message(uri_a, message)
+    assert resp_post.status_code == 201
+
+    # Read message from node B
+    resp_get = Rest.get_message(uri_b)
+    assert resp_get.status_code == 200
+    assert resp_get.body == message
+
+    Enum.each(context[:uris], fn node ->
+      resp_get = Rest.get_message(node)
+      assert resp_get.status_code == 204
+    end)
+  end
 
   test "cannot see a message from any node once it has been accepted", context do
     [uri_a, uri_b, _] = context[:uris]

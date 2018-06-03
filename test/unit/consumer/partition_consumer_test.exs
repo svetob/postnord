@@ -43,15 +43,18 @@ defmodule Postnord.Test.Consumer.Partition do
     {:ok, _id, "foo"} = Partition.read(context[:pid])
   end
 
-  test "Reads same value from file until accepted", context do
+  test "Does not return messages that are waiting for confirmation", context do
     msgs = ["foo", "bar"]
     write_data(msgs, entries_for(msgs))
 
     {:ok, id_a, "foo"} = Partition.read(context[:pid])
-    assert {:ok, id_a, "foo"} == Partition.read(context[:pid])
-    assert :ok == Partition.accept(context[:pid], id_a)
     {:ok, id_b, "bar"} = Partition.read(context[:pid])
-    assert {:ok, id_b, "bar"} == Partition.read(context[:pid])
+    assert :empty == Partition.read(context[:pid])
+
+    assert :ok == Partition.accept(context[:pid], id_a)
+    assert :ok == Partition.accept(context[:pid], id_b)
+
+    assert :empty == Partition.read(context[:pid])
   end
 
   test "Reads values from file in order", context do

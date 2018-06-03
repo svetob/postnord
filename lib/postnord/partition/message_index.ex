@@ -1,8 +1,8 @@
 defmodule Postnord.Partition.MessageIndex do
   require Logger
-  
-  import Postnord.BinaryConvert
+
   import ExUnit.Assertions
+  import Postnord.BinaryConvert
 
   @moduledoc """
   Index log entry definition.
